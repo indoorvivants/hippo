@@ -1,13 +1,14 @@
 val V = new {
-  val Scala = "3.0.1"
+  val Scala = "3.1.0-RC1"
 
   val laminar         = "0.13.0"
-  val http4s          = "0.23.0"
+  val http4s          = "0.23.2"
   val sttp            = "3.3.13"
   val circe           = "0.14.1"
   val decline         = "2.1.0"
   val organiseImports = "0.5.0"
-  val weaver          = "0.7.4"
+  val weaver          = "0.7.6"
+  val scodec          = "2.0.0"
 }
 
 scalaVersion := V.Scala
@@ -33,6 +34,10 @@ val Dependencies = new {
         Seq("com.monovore"           %% "decline" % V.decline)
   )
 
+  lazy val analyser = Seq(
+    libraryDependencies += "org.scodec" %% "scodec-core" % V.scodec
+  )
+
   lazy val shared = Def.settings(
     libraryDependencies += "io.circe" %%% "circe-core" % V.circe
   )
@@ -44,7 +49,13 @@ val Dependencies = new {
 }
 
 lazy val root =
-  (project in file(".")).aggregate(frontend, backend, shared.js, shared.jvm)
+  (project in file(".")).aggregate(
+    frontend,
+    backend,
+    shared.js,
+    shared.jvm,
+    analyser.jvm
+  )
 
 lazy val frontend = (project in file("modules/frontend"))
   .dependsOn(shared.js)
@@ -82,6 +93,14 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .in(file("modules/shared"))
   .jvmSettings(Dependencies.shared)
   .jsSettings(Dependencies.shared)
+  .jsSettings(commonBuildSettings)
+  .jvmSettings(commonBuildSettings)
+
+lazy val analyser = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("modules/analyser"))
+  .jvmSettings(Dependencies.analyser)
+  .jsSettings(Dependencies.analyser)
   .jsSettings(commonBuildSettings)
   .jvmSettings(commonBuildSettings)
 
