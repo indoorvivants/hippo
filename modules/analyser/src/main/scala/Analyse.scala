@@ -23,7 +23,7 @@ object Codecs:
   val u1 = uint8
   val u4 = int32
   val u2 = int16
-  val u8 = ("id high" | u4) :: ("id low" | u4)
+  val u8 = int64
 
   val header =
     (fixedString("JAVA PROFILE 1.0.") ~>
@@ -33,9 +33,11 @@ object Codecs:
         .typecase('2'.toByte, provide(ProfileVersion.V2))) ::
       nullByte ~>
       u4.as[Size.Identifiers] ::
-      u8.as[TimeStamp]).as[Metadata]
+      long(TimeStamp)).as[Metadata]
 
-  def identifier(using sz: Size.Identifiers) = "identifier" | u8.as[Identifier]
+  def identifier(using sz: Size.Identifiers) =
+    "identifier" | (u4 :: u4).as[Identifier]
+
   def id[A](companion: OpaqueId[A])(using Size.Identifiers): Codec[A] =
     s"identifier ${companion.toString}" | identifier.xmap(
       companion.from(_),
@@ -45,32 +47,12 @@ object Codecs:
   def int[A](companion: OpaqueIntegral[A, Int]): Codec[A] =
     u4.xmap(companion.from(_), companion.to(_))
 
-  def classId(using Size.Identifiers) = "class id" | identifier.as[ClassId]
-  def arrayId(using Size.Identifiers) = "array id" | identifier.as[ArrayId]
-  def arrayClassId(using Size.Identifiers) =
-    "array class id" | identifier.as[ArrayClassId]
-  def objectId(using Size.Identifiers) = "object id" | identifier.as[ObjectId]
-  def threadId(using Size.Identifiers) = "object id" | identifier.as[ThreadId]
-  def jniGlobalRefId(using Size.Identifiers) =
-    "object id" | identifier.as[JniGlobalRefId]
-  def stringId(using Size.Identifiers) = "string id" | identifier.as[StringId]
-  def classNameId(using Size.Identifiers) =
-    "classname id" | identifier.as[ClassNameId]
-  def classLoaderId(using Size.Identifiers) =
-    "classloader id" | identifier.as[ClassLoaderId]
-  def signersObjectId(using Size.Identifiers) = identifier.as[SignersObjectId]
-  def protectionDomainId(using Size.Identifiers) =
-    identifier.as[ProtectionDomainId]
-  def stackFrameId(using Size.Identifiers) =
-    identifier.as[StackFrameId]
-  def methodNameId(using Size.Identifiers) =
-    identifier.as[MethodNameId]
-  def methodSignatureId(using Size.Identifiers) =
-    identifier.as[MethodSignatureId]
-  def sourceFileId(using Size.Identifiers) =
-    identifier.as[SourceFileId]
-  def fieldId(using Size.Identifiers) =
-    identifier.as[FieldId]
+  def long[A](companion: OpaqueIntegral[A, Long]): Codec[A] =
+    scodec.codecs.int64.xmap(companion.from(_), companion.to(_))
+
+  def float[A](companion: OpaqueIntegral[A, Float]): Codec[A] =
+    scodec.codecs.float.xmap(companion.from(_), companion.to(_))
+
   def remainingLength(len: Length)(using id: Size.Identifiers) =
     len.value - id.sz
 
@@ -107,25 +89,19 @@ object Codecs:
   val timeShift = "time_shift" | u4.as[TimeShift]
   val length    = "length" | u4.as[Length]
   val lineInfo  = u4.xmap(LineInformation.fromInt, LineInformation.toInt)
-  val stackTraceSerialNumber =
-    "stack trace serial number" | u4.as[StackTraceSerialNumber]
-  val threadSerialNumber = u4.as[ThreadSerialNumber]
-  val classSerialNumber  = u4.as[ClassSerialNumber]
 
   val basicType = u1.xmap(BasicType.fromInt, BasicType.toInt)
 
-  val constantPoolIndex = u2.as[ConstantPoolIndex]
-
   def constantPool(using Size.Identifiers) =
-    (constantPoolIndex :: basicType)
+    (int(ConstantPoolIndex) :: basicType)
       .flatAppend(a => value(a._2))
       .as[ConstantPool]
 
   def instanceField(using Size.Identifiers) =
-    (fieldId :: basicType).as[InstanceField]
+    (id(FieldId) :: basicType).as[InstanceField]
 
   def staticField(using Size.Identifiers) =
-    (fieldId :: basicType).flatAppend(a => value(a._2)).as[StaticField]
+    (id(FieldId) :: basicType).flatAppend(a => value(a._2)).as[StaticField]
 
   val instanceSize = u4
 
@@ -133,12 +109,12 @@ object Codecs:
   def longLength(label: String) = (label | u4)
 
   def classDump(using Size.Identifiers) =
-    (classId ::
-      stackTraceSerialNumber ::
-      classId ::
-      classLoaderId ::
-      signersObjectId ::
-      protectionDomainId ::
+    (id(ClassId) ::
+      int(StackTraceSerialNumber) ::
+      id(ClassId) ::
+      id(ClassLoaderId) ::
+      id(SignersObjectId) ::
+      id(ProtectionDomainId) ::
       identifier ::
       identifier ::
       instanceSize ::
@@ -148,22 +124,22 @@ object Codecs:
       .as[HeapData.ClassDump]
 
   def instanceDump(using Size.Identifiers) =
-    (objectId ::
-      stackTraceSerialNumber ::
-      classId ::
+    (id(ObjectId) ::
+      int(StackTraceSerialNumber) ::
+      id(ClassId) ::
       variableSizeBytes(
         longLength("instance values"),
         bytes
       )).as[HeapData.InstanceDump]
 
   def objectArrayDump(using Size.Identifiers) =
-    (arrayId ::
-      stackTraceSerialNumber ::
+    (id(ArrayId) ::
+      int(StackTraceSerialNumber) ::
       longLength("instance values") ::
-      arrayClassId)
+      id(ArrayClassId))
       .flatAppend { case (aid, sel, length, acid) =>
         listOfN(
-          provide(length), // what
+          provide(length),
           identifier
         )
       }
@@ -181,16 +157,16 @@ object Codecs:
   val frameInfo = u4.xmap(FrameInfo.fromInt, FrameInfo.toInt)
 
   def startThread(using Size.Identifiers) =
-    (threadSerialNumber ::
-      threadId ::
-      stackTraceSerialNumber ::
+    (int(ThreadSerialNumber) ::
+      id(ThreadId) ::
+      int(StackTraceSerialNumber) ::
       id(ThreadNameId) ::
       id(ThreadGroupNameId) ::
       id(ThreadParentGroupNameId)).as[RecordData.StartThread]
 
   def primitiveArrayDump(using Size.Identifiers) =
-    (arrayId ::
-      stackTraceSerialNumber ::
+    (id(ArrayId) ::
+      int(StackTraceSerialNumber) ::
       longLength("num elements") ::
       basicType)
       .flatAppend { case (_, _, len, typ) =>
@@ -199,40 +175,39 @@ object Codecs:
       .as[HeapData.PrimitiveArrayDump]
 
   def rootThreadObject(using Size.Identifiers) =
-    (identifier.as[ThreadId] ::
-      threadSerialNumber ::
-      stackTraceSerialNumber)
+    (id(ThreadId) ::
+      int(ThreadSerialNumber) ::
+      int(StackTraceSerialNumber))
       .as[HeapData.RootThreadObject]
-      .logAs("root")
 
   def rootJavaFrame(using Size.Identifiers) =
-    (objectId ::
-      threadSerialNumber ::
+    (id(ObjectId) ::
+      int(ThreadSerialNumber) ::
       frameInfo).as[HeapData.RootJavaFrame]
 
   def rootJniLocal(using Size.Identifiers) =
-    (objectId ::
-      threadSerialNumber ::
+    (id(ObjectId) ::
+      int(ThreadSerialNumber) ::
       frameInfo).as[HeapData.RootJniLocal]
 
   def rootJniGlobal(using Size.Identifiers) =
-    (objectId ::
-      jniGlobalRefId).as[HeapData.RootJniGlobal]
+    (id(ObjectId) ::
+      id(JniGlobalRefId)).as[HeapData.RootJniGlobal]
 
   def rootUnknown(using Size.Identifiers) =
-    objectId.as[HeapData.RootUnknown]
+    id(ObjectId).as[HeapData.RootUnknown]
 
   def rootStickyClass(using Size.Identifiers) =
-    objectId.as[HeapData.RootStickyClass]
+    id(ObjectId).as[HeapData.RootStickyClass]
 
   def rootNativeStack(using Size.Identifiers) =
-    (objectId :: threadSerialNumber).as[HeapData.RootNativeStack]
+    (id(ObjectId) :: int(ThreadSerialNumber)).as[HeapData.RootNativeStack]
 
   def rootThreadBlock(using Size.Identifiers) =
-    (objectId :: threadSerialNumber).as[HeapData.RootThreadBlock]
+    (id(ObjectId) :: int(ThreadSerialNumber)).as[HeapData.RootThreadBlock]
 
   def rootMonitorUsed(using Size.Identifiers) =
-    objectId.as[HeapData.RootMonitorUsed]
+    id(ObjectId).as[HeapData.RootMonitorUsed]
 
   def heapData(using Size.Identifiers) =
     discriminated[HeapData]
@@ -254,48 +229,104 @@ object Codecs:
       .typecase(0x06, "root thread block" | rootThreadBlock)
       .typecase(0x07, "root monitor used" | rootMonitorUsed)
 
+  val endThread   = int(ThreadSerialNumber).as[RecordData.EndThread]
+  val unloadClass = int(ClassSerialNumber).as[RecordData.UnloadClass]
+
+  def loadClass(using Size.Identifiers) =
+    (int(ClassSerialNumber) ::
+      id(ClassId) ::
+      int(StackTraceSerialNumber) ::
+      id(ClassNameId))
+      .as[RecordData.LoadClass]
+      .upcast[RecordData]
+
+  def stackTrace(using Size.Identifiers) =
+    (int(StackTraceSerialNumber) ::
+      int(ThreadSerialNumber) ::
+      listOfN(
+        u4,
+        id(StackFrameId)
+      ))
+      .as[RecordData.StackTrace]
+      .upcast[RecordData]
+
+  def stackFrame(using Size.Identifiers) =
+    (id(StackFrameId) ::
+      id(MethodNameId) ::
+      id(MethodSignatureId) ::
+      id(SourceFileId) ::
+      int(ClassSerialNumber) ::
+      lineInfo)
+      .as[RecordData.StackFrame]
+      .upcast[RecordData]
+
+  def stringData(len: Length)(using Size.Identifiers) =
+    (id(StringId) :: stringValue(remainingLength(len)))
+      .as[RecordData.Strings]
+      .upcast[RecordData]
+
+  def heapDataSegment(len: Length)(using Size.Identifiers) =
+    val rec = ("list of heap data" | list(heapData))
+      .as[RecordData.HeapDumpSegment]
+
+    fixedSizeBytes(len.value, rec)
+
+  def heapDumpEnd(len: Length) =
+    fixedSizeBytes(len.value, provide(RecordData.HeapDumpEnd))
+
+  val heapSummary =
+    (
+      int(TotalLiveBytes) ::
+        int(TotalLiveInstances) ::
+        long(TotalBytesAllocated) ::
+        long(TotalInstancesAllocated)
+    ).as[RecordData.HeapSummary]
+
+  val allocationKind = u1.xmap(AllocationKind.fromInt, AllocationKind.toInt)
+
+  val allocationSite =
+    (
+      allocationKind ::
+        int(ClassSerialNumber) ::
+        int(StackTraceSerialNumber) ::
+        int(TotalLiveBytes) ::
+        int(TotalLiveInstances) ::
+        int(BytesAllocated) ::
+        int(InstancesAllocated)
+    ).as[AllocationSite]
+
+  val allocSites =
+    (int(Flags) ::
+      float(CutoffRatio) ::
+      int(TotalLiveBytes) ::
+      int(TotalLiveInstances) ::
+      long(TotalBytesAllocated) ::
+      long(TotalInstancesAllocated) ::
+      listOfN(u4, allocationSite)).as[RecordData.AllocSites]
+
   def record(using sz: Size.Identifiers) =
     val preface = tag :: timeShift :: length
 
     preface.flatMap {
-      case (Tag.String, shift, len) =>
-        (stringId :: stringValue(remainingLength(len)))
-          .as[RecordData.Strings]
-          .upcast[RecordData]
-
-      case (Tag.LoadClass, _, _) =>
-        (classSerialNumber :: classId :: stackTraceSerialNumber :: classNameId)
-          .as[RecordData.LoadClass]
-          .upcast[RecordData]
-
-      case (Tag.StackTrace, _, _) =>
-        (stackTraceSerialNumber :: threadSerialNumber :: listOfN(
-          u4,
-          identifier
-        ))
-          .as[RecordData.StackTrace]
-          .upcast[RecordData]
-
-      case (Tag.StackFrame, _, _) =>
-        (stackFrameId :: methodNameId :: methodSignatureId :: sourceFileId :: classSerialNumber :: lineInfo)
-          .as[RecordData.StackFrame]
-          .upcast[RecordData]
-
-      case (Tag.HeapDumpSegment, _, len) =>
-        val rec = ("list of heap data" | list(heapData))
-          .as[RecordData.HeapDumpSegment]
-
-        fixedSizeBytes(len.value, rec)
-      case (Tag.HeapDumpEnd, _, len) =>
-        fixedSizeBytes(len.value, provide(RecordData.HeapDumpEnd))
+      case (Tag.String, shift, len)      => stringData(len)
+      case (Tag.LoadClass, _, _)         => loadClass
+      case (Tag.StackTrace, _, _)        => stackTrace
+      case (Tag.StackFrame, _, _)        => stackFrame
+      case (Tag.HeapDumpSegment, _, len) => heapDataSegment(len)
+      case (Tag.HeapDumpEnd, _, len)     => heapDumpEnd(len)
+      case (Tag.UnloadClass, _, _)       => unloadClass
+      case (Tag.HeapSummary, _, _)       => heapSummary
+      case (Tag.AllocSites, _, _)        => allocSites
+      case (Tag.StartThread, _, _)       => startThread
+      case (Tag.EndThread, _, _)         => endThread
 
     }
   end record
 end Codecs
 
-@main def analyse =
+@main def analyse(filename: String) =
   val buf = new FileInputStream(
-    "/Users/velvetbaldmime/projects/heappie/heapdump-1631032668990.hprof"
+    "/Users/velvetbaldmime/projects/heappie/" + filename
   )
 
   val byteBuffer = buf.readAllBytes
@@ -308,7 +339,13 @@ end Codecs
     vector(record.decodeOnly)
   }
 
-  val result     = heapDump.as[HeapProfile].decode(bv.bits).require.value
+  val result = heapDump.as[HeapProfile].decode(bv.bits).require.value
+  println(
+    result.records
+      .map(_.getClass)
+      .groupBy(identity)
+      .transform((a, b) => b.length)
+  )
   val invariants = Invariants(result)
   assert(invariants.allLoadedClassesHaveAName)
 end analyse

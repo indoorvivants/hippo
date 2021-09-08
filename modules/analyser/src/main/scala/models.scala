@@ -12,7 +12,10 @@ enum Tag:
   case String, LoadClass, UnloadClass, StackFrame, StackTrace, AllocSites,
   HeapSummary, StartThread, EndThread, HeapDumpSegment, HeapDumpEnd
 
-case class TimeStamp(high: Int, low: Int)
+// case class TimeStamp(high: Int, low: Int)
+opaque type TimeStamp = Long
+object TimeStamp extends heappie.OpaqueIntegral[TimeStamp, Long]
+
 case class Metadata(
     version: ProfileVersion,
     identifiersSize: Size.Identifiers,
@@ -20,19 +23,25 @@ case class Metadata(
 )
 
 case class Identifier(l: Int, r: Int)
-case class ClassSerialNumber(value: Int)
-case class StackTraceSerialNumber(value: Int)
-case class ThreadSerialNumber(value: Int)
-case class ConstantPoolIndex(value: Int)
+
+opaque type ClassSerialNumber = Int
+object ClassSerialNumber extends heappie.OpaqueIntegral[ClassSerialNumber, Int]
+opaque type ConstantPoolIndex = Int
+object ConstantPoolIndex extends heappie.OpaqueIntegral[ConstantPoolIndex, Int]
+opaque type StackTraceSerialNumber = Int
+object StackTraceSerialNumber
+    extends heappie.OpaqueIntegral[StackTraceSerialNumber, Int]
+opaque type ThreadSerialNumber = Int
+object ThreadSerialNumber
+    extends heappie.OpaqueIntegral[ThreadSerialNumber, Int]
 
 case class TimeShift(shift: Int)
 case class Length(value: Int)
 
-abstract class OpaqueId[A](using inv: A =:= Identifier) {
-  extension (d: A) def id = inv.apply(d)
+abstract class OpaqueId[A](using inv: A =:= Identifier):
+  extension (d: A) def id            = inv.apply(d)
   inline def from(id: Identifier): A = inv.flip.apply(id)
-  inline def to(id: A): Identifier = inv.apply(id)
-}
+  inline def to(id: A): Identifier   = inv.apply(id)
 
 opaque type ThreadNameId = Identifier
 object ThreadNameId extends OpaqueId[ThreadNameId]
@@ -43,22 +52,53 @@ object ThreadGroupNameId extends OpaqueId[ThreadGroupNameId]
 opaque type ThreadParentGroupNameId = Identifier
 object ThreadParentGroupNameId extends OpaqueId[ThreadParentGroupNameId]
 
-case class ClassId(id: Identifier)
-case class JniGlobalRefId(id: Identifier)
-case class ThreadId(id: Identifier)
-case class ArrayId(id: Identifier)
-case class ArrayClassId(id: Identifier)
-case class ObjectId(id: Identifier)
-case class FieldId(id: Identifier)
-case class StringId(id: Identifier)
-case class ClassNameId(id: Identifier)
-case class ClassLoaderId(id: Identifier)
-case class SignersObjectId(id: Identifier)
-case class ProtectionDomainId(id: Identifier)
-case class StackFrameId(id: Identifier)
-case class MethodNameId(id: Identifier)
-case class MethodSignatureId(id: Identifier)
-case class SourceFileId(id: Identifier)
+opaque type ThreadId = Identifier
+object ThreadId extends OpaqueId[ThreadId]
+
+opaque type ArrayId = Identifier
+object ArrayId extends OpaqueId[ArrayId]
+
+opaque type StringId = Identifier
+object StringId extends OpaqueId[StringId]
+
+opaque type ObjectId = Identifier
+object ObjectId extends OpaqueId[ObjectId]
+
+opaque type ClassId = Identifier
+object ClassId extends OpaqueId[ClassId]
+
+opaque type ClassLoaderId = Identifier
+object ClassLoaderId extends OpaqueId[ClassLoaderId]
+
+opaque type ClassNameId = Identifier
+object ClassNameId extends OpaqueId[ClassNameId]
+
+opaque type ArrayClassId = Identifier
+object ArrayClassId extends OpaqueId[ArrayClassId]
+
+opaque type FieldId = Identifier
+object FieldId extends OpaqueId[FieldId]
+
+opaque type MethodNameId = Identifier
+object MethodNameId extends OpaqueId[MethodNameId]
+
+opaque type StackFrameId = Identifier
+object StackFrameId extends OpaqueId[StackFrameId]
+
+opaque type SignersObjectId = Identifier
+object SignersObjectId extends OpaqueId[SignersObjectId]
+
+opaque type SourceFileId = Identifier
+object SourceFileId extends OpaqueId[SourceFileId]
+
+opaque type ProtectionDomainId = Identifier
+object ProtectionDomainId extends OpaqueId[ProtectionDomainId]
+
+opaque type JniGlobalRefId = Identifier
+object JniGlobalRefId extends OpaqueId[JniGlobalRefId]
+
+opaque type MethodSignatureId = Identifier
+object MethodSignatureId extends OpaqueId[MethodSignatureId]
 
 enum LineInformation:
   case Number(i: Int)
@@ -86,7 +126,7 @@ enum Value:
   case U1(value: Int)
   case U2(value: Int)
   case U4(value: Int)
-  case U8(value: (Int, Int))
+  case U8(value: Long)
   case ObjectId(id: Identifier)
 
 enum FrameInfo:
@@ -228,15 +268,69 @@ opaque type TotalBytesAllocated = Long
 object TotalBytesAllocated extends OpaqueIntegral[TotalBytesAllocated, Long]
 
 opaque type TotalInstancesAllocated = Long
-object TotalInstancesAllocated extends OpaqueIntegral[TotalBytesAllocated, Long]
+object TotalInstancesAllocated
+    extends OpaqueIntegral[TotalInstancesAllocated, Long]
+
+opaque type BytesAllocated = Int
+object BytesAllocated extends OpaqueIntegral[BytesAllocated, Int]
+
+opaque type InstancesAllocated = Int
+object InstancesAllocated extends OpaqueIntegral[InstancesAllocated, Int]
+
+opaque type CutoffRatio = Float
+object CutoffRatio extends OpaqueIntegral[CutoffRatio, Float]
 
 abstract class OpaqueIntegral[A, I: Numeric](using inv: I =:= A):
-  inline def from(i: I)          = inv.apply(i)
-  inline def to(o: A)            = inv.flip.apply(o)
+  inline def from(i: I)             = inv.apply(i)
+  inline def to(o: A)               = inv.flip.apply(o)
   extension (d: A) inline def value = to(d)
+
+opaque type Flags = Int
+object Flags extends OpaqueIntegral[Flags, Int]:
+  val Incremental: Flags        = 0x1
+  val SortedByAllocation: Flags = 0x2
+  val ForceGC: Flags            = 0x4
+
+  extension (f: Flags) def is(other: Flags) = (f & other) != 0
+
+enum AllocationKind:
+  case Single
+  case ArrayOf(typ: BasicType)
+
+object AllocationKind:
+  def fromInt(i: Int) =
+    i match
+      case 0 => Single
+      case n => ArrayOf(BasicType.fromInt(n))
+
+  def toInt(a: AllocationKind) =
+    a match
+      case Single     => 0
+      case ArrayOf(n) => BasicType.toInt(n)
+
+case class AllocationSite(
+    kind: AllocationKind,
+    classSerialNumber: ClassSerialNumber,
+    stackTraceSerialNumber: StackTraceSerialNumber,
+    liveBytes: TotalLiveBytes,
+    liveInstances: TotalLiveInstances,
+    bytesAllocated: BytesAllocated,
+    instancesAllocated: InstancesAllocated
+)
 
 enum RecordData:
   case Strings(id: StringId, content: ByteVector)
+  case UnloadClass(classSerialNumber: ClassSerialNumber)
+  case EndThread(threadSerialNumber: ThreadSerialNumber)
+  case AllocSites(
+      flags: Flags,
+      cutoffRation: CutoffRatio,
+      totalLiveBytes: TotalLiveBytes,
+      totalLiveInstances: TotalLiveInstances,
+      totalBytesAllocated: TotalBytesAllocated,
+      totalInstancesAllocated: TotalInstancesAllocated,
+      sites: List[AllocationSite]
+  )
   case LoadClass(
       classSerialNumber: ClassSerialNumber,
       classObjectId: ClassId,
@@ -246,7 +340,7 @@ enum RecordData:
   case StackTrace(
       stackTraceSerialNumber: StackTraceSerialNumber,
       threadSerialNumber: ThreadSerialNumber,
-      frames: List[Identifier]
+      frames: List[StackFrameId]
   )
   case StackFrame(
       stackFrame: StackFrameId,
