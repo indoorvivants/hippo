@@ -12,7 +12,6 @@ enum Tag:
   case String, LoadClass, UnloadClass, StackFrame, StackTrace, AllocSites,
   HeapSummary, StartThread, EndThread, HeapDumpSegment, HeapDumpEnd
 
-// case class TimeStamp(high: Int, low: Int)
 opaque type TimeStamp = Long
 object TimeStamp extends heappie.OpaqueIntegral[TimeStamp, Long]
 
@@ -370,4 +369,11 @@ enum RecordData:
   case Unknown
 end RecordData
 
-case class HeapProfile(metadata: Metadata, records: Vector[RecordData])
+case class HeapProfile(metadata: Metadata, records: Vector[Record])
+
+case class Record(
+  tag: Tag,
+  shift: TimeShift,
+  length: Length,
+  data: RecordData
+)
