@@ -1,13 +1,14 @@
-package example.backend
+package hippo.backend
 
 import cats.effect.*
 
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
 import org.http4s.server.middleware.GZip
+import fs2.io.file.Path
 
 object Server extends IOApp:
-  def resource(service: Service, config: ServerConfig) =
+  def resource(service: HeapExplorerService, config: ServerConfig) =
     val frontendJS = config.mode + ".js"
     val routes     = new Routes(service, frontendJS).routes
 
@@ -31,7 +32,24 @@ object Server extends IOApp:
           )
         )
 
-        resource(ServiceImpl, config)
+        val fileRead =
+          fs2.io.file
+            .Files[IO]
+            .readAll(Path(config.hprof))
+            .compile
+            .to(Array)
+            .map(scodec.bits.ByteVector(_))
+            .flatMap { bv =>
+              IO.println(bv.take(5)) *>
+            IO.println("Starting to read the file...") *>
+              IO.blocking(hippo.analyse.Analyser.analyse(bv)) <*
+              IO.println("Finished reading the file")
+            }
+            .map(HeapExplorerService.Impl(_))
+
+        Resource
+          .eval(fileRead)
+          .flatMap(service => resource(service, config))
           .use(_ => status *> IO.never)
           .as(ExitCode.Success)
 end Server

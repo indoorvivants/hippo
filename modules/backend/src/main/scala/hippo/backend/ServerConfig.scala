@@ -1,4 +1,4 @@
-package example.backend
+package hippo.backend
 
 import cats.data.Validated
 import cats.implicits.*
@@ -10,7 +10,8 @@ import com.monovore.decline.*
 case class ServerConfig(
     host: Host,
     port: Port,
-    mode: String
+    mode: String,
+    hprof: String
 )
 
 object ServerConfig:
@@ -42,8 +43,10 @@ object ServerConfig:
     .withDefault(DefaultMode)
     .validate("must be one of: dev, prod")(Set("dev", "prod").contains)
 
+  private val fileOpt = Opts.option[String]("hprof", help = "Heap dump")
+
   def apply: Command[ServerConfig] =
     Command("", "Run backend and assets server")(
-      (hostOpt, portOpt, modeOpt).mapN(ServerConfig.apply)
+      (hostOpt, portOpt, modeOpt, fileOpt).mapN(ServerConfig.apply)
     )
 end ServerConfig

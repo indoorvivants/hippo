@@ -1,4 +1,4 @@
-package example.frontend
+package hippo.frontend
 
 import com.raquo.laminar.api.L.*
 import org.scalajs.dom

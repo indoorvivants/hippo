@@ -1,38 +1,60 @@
-package heappie
+package hippo.shared.profile
+
+import io.circe.Codec
+import io.circe.Encoder
+import io.circe.Decoder
+import scala.util.Try
+import java.nio.ByteBuffer
 
 import scodec.bits.ByteVector
 
-enum ProfileVersion:
+opaque type Bytes = ByteVector
+object Bytes:
+  def from(bv: ByteVector): Bytes              =  bv
+  extension (bv: Bytes) def toByteVector: ByteVector = bv
+  given Codec[Bytes] =
+    val enc = Encoder[Array[Byte]].contramap[Bytes](_.toArray)
+    val dec = Decoder[Array[Byte]].map(ByteVector(_))
+
+    Codec.from(dec, enc)
+
+enum ProfileVersion derives Codec.AsObject:
   case V1, V2
 
-enum Size:
+enum Size derives Codec.AsObject:
   case Identifiers(sz: Int)
 
-enum Tag:
+enum Tag derives Codec.AsObject:
   case String, LoadClass, UnloadClass, StackFrame, StackTrace, AllocSites,
   HeapSummary, StartThread, EndThread, HeapDumpSegment, HeapDumpEnd
 
 opaque type TimeStamp = Long
-object TimeStamp extends heappie.OpaqueIntegral[TimeStamp, Long]
+object TimeStamp extends OpaqueIntegral[TimeStamp, Long]
 
 case class Metadata(
     version: ProfileVersion,
     identifiersSize: Size.Identifiers,
     timestamp: TimeStamp
-)
+) derives Codec.AsObject
 
-case class Identifier(l: Int, r: Int)
+opaque type Identifier = Long
+object Identifier:
+  extension (d: Identifier) def value: Long = d
+  inline def from(id: Long): Identifier = id 
+
+  given Codec[Identifier] = Codec[Long]
 
 opaque type ClassSerialNumber = Int
-object ClassSerialNumber extends heappie.OpaqueIntegral[ClassSerialNumber, Int]
+object ClassSerialNumber extends OpaqueIntegral[ClassSerialNumber, Int]
+
 opaque type ConstantPoolIndex = Int
-object ConstantPoolIndex extends heappie.OpaqueIntegral[ConstantPoolIndex, Int]
+object ConstantPoolIndex extends OpaqueIntegral[ConstantPoolIndex, Int]
+
 opaque type StackTraceSerialNumber = Int
 object StackTraceSerialNumber
-    extends heappie.OpaqueIntegral[StackTraceSerialNumber, Int]
+    extends OpaqueIntegral[StackTraceSerialNumber, Int]
 opaque type ThreadSerialNumber = Int
-object ThreadSerialNumber
-    extends heappie.OpaqueIntegral[ThreadSerialNumber, Int]
+object ThreadSerialNumber extends OpaqueIntegral[ThreadSerialNumber, Int]
 
 case class TimeShift(shift: Int)
 case class Length(value: Int)
@@ -40,7 +62,10 @@ case class Length(value: Int)
 abstract class OpaqueId[A](using inv: A =:= Identifier):
   extension (d: A) def id            = inv.apply(d)
   inline def from(id: Identifier): A = inv.flip.apply(id)
+  inline def fromLong(l: Long): A = from(Identifier.from(l))
   inline def to(id: A): Identifier   = inv.apply(id)
+
+  given Codec[A] = Codec[Identifier].asInstanceOf[Codec[A]]
 
 opaque type ThreadNameId = Identifier
 object ThreadNameId extends OpaqueId[ThreadNameId]
@@ -99,7 +124,7 @@ object JniGlobalRefId extends OpaqueId[JniGlobalRefId]
 opaque type MethodSignatureId = Identifier
 object MethodSignatureId extends OpaqueId[MethodSignatureId]
 
-enum LineInformation:
+enum LineInformation derives Codec.AsObject:
   case Number(i: Int)
   case Empty, CompiledMethod, NativeMethod, Unknown
 
@@ -121,14 +146,14 @@ object LineInformation:
       case Number(n)      => n
 end LineInformation
 
-enum Value:
+enum Value derives Codec.AsObject:
   case U1(value: Int)
   case U2(value: Int)
   case U4(value: Int)
   case U8(value: Long)
   case ObjectId(id: Identifier)
 
-enum FrameInfo:
+enum FrameInfo derives Codec.AsObject:
   case Num(i: Int)
   case Empty
 
@@ -141,7 +166,7 @@ object FrameInfo:
     case Empty  => -1
     case Num(n) => n
 
-enum BasicType:
+enum BasicType derives Codec.AsObject:
   case Object, Boolean, Char, Float, Double, Byte, Short, Int, Long
 
 object BasicType:
@@ -175,20 +200,20 @@ case class ConstantPool(
     index: ConstantPoolIndex,
     entryType: BasicType,
     value: Value
-)
+) derives Codec.AsObject
 
 case class StaticField(
     nameId: FieldId,
     fieldType: BasicType,
     value: Value
-)
+) derives Codec.AsObject
 
 case class InstanceField(
     nameId: FieldId,
     fieldType: BasicType
-)
+) derives Codec.AsObject
 
-enum HeapData:
+enum HeapData derives Codec.AsObject:
   case RootUnknown(objectId: ObjectId)
   case RootJniGlobal(objectId: ObjectId, jniGlobalRefId: JniGlobalRefId)
   case RootJniLocal(
@@ -237,7 +262,7 @@ enum HeapData:
       objectId: ObjectId,
       stackTraceSerialNumber: StackTraceSerialNumber,
       classId: ClassId,
-      values: ByteVector
+      values: Bytes
   )
 
   case ObjectArrayDump(
@@ -253,7 +278,7 @@ enum HeapData:
       stackTraceSerialNumber: StackTraceSerialNumber,
       numElements: Int,
       elementType: BasicType,
-      els: ByteVector
+      els: Bytes
   )
 end HeapData
 
@@ -279,10 +304,18 @@ object InstancesAllocated extends OpaqueIntegral[InstancesAllocated, Int]
 opaque type CutoffRatio = Float
 object CutoffRatio extends OpaqueIntegral[CutoffRatio, Float]
 
-abstract class OpaqueIntegral[A, I: Numeric](using inv: I =:= A):
+abstract class OpaqueIntegral[A, I: Numeric](using
+    inv: I =:= A,
+    enc: Encoder[I],
+    dec: Decoder[I]
+):
+
   inline def from(i: I)             = inv.apply(i)
   inline def to(o: A)               = inv.flip.apply(o)
   extension (d: A) inline def value = to(d)
+
+  given Encoder[A] = enc.asInstanceOf[Encoder[A]]
+  given Decoder[A] = dec.asInstanceOf[Decoder[A]]
 
 opaque type Flags = Int
 object Flags extends OpaqueIntegral[Flags, Int]:
@@ -292,7 +325,7 @@ object Flags extends OpaqueIntegral[Flags, Int]:
 
   extension (f: Flags) def is(other: Flags) = (f & other) != 0
 
-enum AllocationKind:
+enum AllocationKind derives Codec.AsObject:
   case Single
   case ArrayOf(typ: BasicType)
 
@@ -315,10 +348,32 @@ case class AllocationSite(
     liveInstances: TotalLiveInstances,
     bytesAllocated: BytesAllocated,
     instancesAllocated: InstancesAllocated
-)
+) derives Codec.AsObject
 
-enum RecordData:
-  case Strings(id: StringId, content: ByteVector)
+enum StringData derives Codec.AsObject:
+  case Valid(s: String)
+  case Invalid(b: Bytes)
+
+  def str: Option[String] =
+    this match
+      case Valid(s) => Some(s)
+      case _        => None
+
+  def toBytes = this match
+    case Valid(s)   => (Bytes.from(ByteVector(s.getBytes)))
+    case Invalid(b) => b
+
+object StringData:
+  private val decoder = java.nio.charset.StandardCharsets.UTF_8.newDecoder.nn
+  def from(b: Bytes) =
+    try
+      val result = decoder.decode(ByteBuffer.wrap(b.toByteVector.toArray))
+      Valid(new String(result.array))
+    catch case ex => Invalid(b)
+
+
+enum RecordData derives Codec.AsObject:
+  case Strings(id: StringId, content: StringData)
   case UnloadClass(classSerialNumber: ClassSerialNumber)
   case EndThread(threadSerialNumber: ThreadSerialNumber)
   case AllocSites(
@@ -350,7 +405,6 @@ enum RecordData:
       lineNumber: LineInformation
   )
   case HeapDumpSegment(roots: List[HeapData])
-  case HeapDump(segments: List[HeapDumpSegment])
   case HeapDumpEnd
   case HeapSummary(
       totalLiveBytes: TotalLiveBytes,
@@ -370,10 +424,11 @@ enum RecordData:
 end RecordData
 
 case class HeapProfile(metadata: Metadata, records: Vector[Record])
+    derives Codec.AsObject
 
 case class Record(
-  tag: Tag,
-  shift: TimeShift,
-  length: Length,
-  data: RecordData
-)
+    tag: Tag,
+    shift: TimeShift,
+    length: Length,
+    data: RecordData
+) derives Codec.AsObject

@@ -1,4 +1,4 @@
-package example.backend
+package hippo.backend
 
 import scala.concurrent.duration.*
 
@@ -13,24 +13,15 @@ import example.shared.Protocol.*
 import org.http4s.circe.CirceEntityDecoder
 import cats.*
 import org.http4s.dsl.Http4sDsl
+import hippo.shared.profile.*
 
 class Routes(
-    service: Service,
+    service: HeapExplorerService,
     frontendJS: String
 ) extends Http4sDsl[IO]:
   def routes = HttpRoutes.of[IO] {
-    case request @ POST -> Root / "get-suggestions" =>
-      for
-        req <- circeEntityDecoder[IO, GetSuggestions.Request]
-          .decode(request, strict = true)
-          .value
-        result <- service.getSuggestions(
-          req.getOrElse(throw new RuntimeException("what"))
-        )
-        // introduce a fake delay here to showcase the amazing
-        // loader gif
-        resp <- Ok(result) <* IO.sleep(50.millis)
-      yield resp
+    case request @ GET -> Root / "stringId" / sid =>
+      service.getString(StringId.fromLong(sid.toLong)).flatMap(Ok(_))
 
     case request @ GET -> Root / "frontend" / "app.js" =>
       StaticFile

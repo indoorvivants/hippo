@@ -1,4 +1,4 @@
-package example.backend
+package hippo.backend
 
 import cats.effect.IO
 

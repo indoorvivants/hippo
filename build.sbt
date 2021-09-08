@@ -9,6 +9,7 @@ val V = new {
   val organiseImports = "0.5.0"
   val weaver          = "0.7.6"
   val scodec          = "2.0.0"
+  val scodecBits = "1.1.28"
 }
 
 scalaVersion := V.Scala
@@ -39,7 +40,8 @@ val Dependencies = new {
   )
 
   lazy val shared = Def.settings(
-    libraryDependencies += "io.circe" %%% "circe-core" % V.circe
+    libraryDependencies += "io.circe" %%% "circe-core" % V.circe,
+    libraryDependencies += "org.scodec" %%% "scodec-bits" % V.scodecBits
   )
 
   lazy val tests = Def.settings(
@@ -69,7 +71,7 @@ lazy val frontend = (project in file("modules/frontend"))
   .settings(commonBuildSettings)
 
 lazy val backend = (project in file("modules/backend"))
-  .dependsOn(shared.jvm)
+  .dependsOn(shared.jvm, analyser.jvm)
   .settings(Dependencies.backend)
   .settings(Dependencies.tests)
   .settings(commonBuildSettings)
@@ -95,9 +97,13 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .jsSettings(Dependencies.shared)
   .jsSettings(commonBuildSettings)
   .jvmSettings(commonBuildSettings)
+  .settings(
+    scalacOptions ++= Seq("-Xmax-inlines", "100")
+  )
 
 lazy val analyser = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
+  .dependsOn(shared)
   .in(file("modules/analyser"))
   .jvmSettings(Dependencies.analyser)
   .jsSettings(Dependencies.analyser)

@@ -1,4 +1,4 @@
-package heappie
+package hippo.analyse
 
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
@@ -12,6 +12,8 @@ import java.io.ByteArrayInputStream
 import java.io.FileInputStream
 import java.lang.annotation.Native
 import scala.util.Try
+
+import hippo.shared.profile.*
 
 object codecs:
   def fixedString(s: String): Codec[Unit] =
@@ -36,7 +38,9 @@ object codecs:
       long(TimeStamp)).as[Metadata]
 
   def identifier(using sz: Size.Identifiers) =
-    "identifier" | (u4 :: u4).as[Identifier]
+    "identifier" | scodec.codecs
+      .long(sz.sz * 8)
+      .xmap(Identifier.from(_), _.value)
 
   def id[A](companion: OpaqueId[A])(using Size.Identifiers): Codec[A] =
     s"identifier ${companion.toString}" | identifier.xmap(
@@ -56,8 +60,14 @@ object codecs:
   def remainingLength(len: Length)(using id: Size.Identifiers) =
     len.value - id.sz
 
-  def stringValue(len: Int)(using Size.Identifiers) =
-    "string content" | bytes(len)
+  def stringValue(len: Int)(using Size.Identifiers): Codec[StringData] =
+    "string content" | byteVector(len).xmap(StringData.from(_), _.toBytes)
+
+  val byteVector: Codec[Bytes] =
+    bytes.xmap(Bytes.from(_), _.toByteVector)
+
+  def byteVector(len: Int) =
+    bytes(len).xmap(Bytes.from(_), _.toByteVector)
 
   def value(of: BasicType)(using Size.Identifiers) =
     import BasicType as bt
@@ -129,7 +139,7 @@ object codecs:
       id(ClassId) ::
       variableSizeBytes(
         longLength("instance values"),
-        bytes
+        byteVector
       )).as[HeapData.InstanceDump]
 
   def objectArrayDump(using Size.Identifiers) =
@@ -172,7 +182,7 @@ object codecs:
       longLength("num elements") ::
       basicType)
       .flatAppend { case (_, _, len, typ) =>
-        bytes(len * size(typ))
+        byteVector(len * size(typ))
       }
       .as[HeapData.PrimitiveArrayDump]
 
@@ -319,20 +329,22 @@ object codecs:
   def record(using sz: Size.Identifiers) =
     val preface = tag :: timeShift :: length
 
-    preface.flatAppend {
-      case (Tag.String, shift, len)      => stringData(len)
-      case (Tag.LoadClass, _, _)         => loadClass
-      case (Tag.StackTrace, _, _)        => stackTrace
-      case (Tag.StackFrame, _, _)        => stackFrame
-      case (Tag.HeapDumpSegment, _, len) => heapDataSegment(len)
-      case (Tag.HeapDumpEnd, _, len)     => heapDumpEnd(len)
-      case (Tag.UnloadClass, _, _)       => unloadClass
-      case (Tag.HeapSummary, _, _)       => heapSummary
-      case (Tag.AllocSites, _, _)        => allocSites
-      case (Tag.StartThread, _, _)       => startThread
-      case (Tag.EndThread, _, _)         => endThread
+    preface
+      .flatAppend {
+        case (Tag.String, shift, len)      => stringData(len)
+        case (Tag.LoadClass, _, _)         => loadClass
+        case (Tag.StackTrace, _, _)        => stackTrace
+        case (Tag.StackFrame, _, _)        => stackFrame
+        case (Tag.HeapDumpSegment, _, len) => heapDataSegment(len)
+        case (Tag.HeapDumpEnd, _, len)     => heapDumpEnd(len)
+        case (Tag.UnloadClass, _, _)       => unloadClass
+        case (Tag.HeapSummary, _, _)       => heapSummary
+        case (Tag.AllocSites, _, _)        => allocSites
+        case (Tag.StartThread, _, _)       => startThread
+        case (Tag.EndThread, _, _)         => endThread
 
-    }.as[Record]
+      }
+      .as[Record]
   end record
 
   val heapDump = header.flatZip { m =>
@@ -340,7 +352,6 @@ object codecs:
 
     vector(record)
   }
+  extension [A](codec: Codec[A])
+    private def logAs(prefix: String) = logToStdOut(codec, prefix)
 end codecs
-
-extension [A](codec: Codec[A])
-  private[heappie] def logAs(prefix: String) = logToStdOut(codec, prefix)
