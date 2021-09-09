@@ -9,4 +9,9 @@ import hippo.shared.profile.*
 
 object Analyser:
   def analyse(bv: ByteVector): HeapProfile =
-    codecs.heapDump.as[HeapProfile].decode(bv.bits).require.value
+    val value = codecs.heapDump.as[HeapProfile].decode(bv.bits).require.value
+    println("Some examples")
+
+    value.records.take(5).foreach(println)
+    value
+    

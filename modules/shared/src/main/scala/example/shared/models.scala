@@ -10,7 +10,7 @@ import scodec.bits.ByteVector
 
 opaque type Bytes = ByteVector
 object Bytes:
-  def from(bv: ByteVector): Bytes              =  bv
+  def from(bv: ByteVector): Bytes                    = bv
   extension (bv: Bytes) def toByteVector: ByteVector = bv
   given Codec[Bytes] =
     val enc = Encoder[Array[Byte]].contramap[Bytes](_.toArray)
@@ -40,7 +40,7 @@ case class Metadata(
 opaque type Identifier = Long
 object Identifier:
   extension (d: Identifier) def value: Long = d
-  inline def from(id: Long): Identifier = id 
+  inline def from(id: Long): Identifier     = id
 
   given Codec[Identifier] = Codec[Long]
 
@@ -62,7 +62,7 @@ case class Length(value: Int)
 abstract class OpaqueId[A](using inv: A =:= Identifier):
   extension (d: A) def id            = inv.apply(d)
   inline def from(id: Identifier): A = inv.flip.apply(id)
-  inline def fromLong(l: Long): A = from(Identifier.from(l))
+  inline def fromLong(l: Long): A    = from(Identifier.from(l))
   inline def to(id: A): Identifier   = inv.apply(id)
 
   given Codec[A] = Codec[Identifier].asInstanceOf[Codec[A]]
@@ -371,7 +371,6 @@ object StringData:
       Valid(new String(result.array))
     catch case ex => Invalid(b)
 
-
 enum RecordData derives Codec.AsObject:
   case Strings(id: StringId, content: StringData)
   case UnloadClass(classSerialNumber: ClassSerialNumber)
@@ -425,6 +424,12 @@ end RecordData
 
 case class HeapProfile(metadata: Metadata, records: Vector[Record])
     derives Codec.AsObject
+
+object HeapProfile:
+  def empty = HeapProfile(
+    Metadata(ProfileVersion.V1, Size.Identifiers(8), TimeStamp.from(50L)),
+    Vector.empty
+  )
 
 case class Record(
     tag: Tag,

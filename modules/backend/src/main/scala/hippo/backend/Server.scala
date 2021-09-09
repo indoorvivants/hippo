@@ -18,7 +18,7 @@ object Server extends IOApp:
       .default[IO]
       .withPort(config.port)
       .withHost(config.host)
-      .withHttpApp(app.orNotFound)
+      .withHttpApp(app)
       .build
 
   def run(args: List[String]): IO[ExitCode] =
@@ -41,9 +41,10 @@ object Server extends IOApp:
             .map(scodec.bits.ByteVector(_))
             .flatMap { bv =>
               IO.println(bv.take(5)) *>
-            IO.println("Starting to read the file...") *>
-              IO.blocking(hippo.analyse.Analyser.analyse(bv)) <*
-              IO.println("Finished reading the file")
+                IO.println("Starting to read the file...") *>
+                IO.blocking(hippo.analyse.Analyser.analyse(bv)) <*
+                // IO.pure(hippo.shared.profile.HeapProfile.empty) <*
+                IO.println("Finished reading the file")
             }
             .map(HeapExplorerService.Impl(_))
 

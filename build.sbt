@@ -9,7 +9,8 @@ val V = new {
   val organiseImports = "0.5.0"
   val weaver          = "0.7.6"
   val scodec          = "2.0.0"
-  val scodecBits = "1.1.28"
+  val scodecBits      = "1.1.28"
+  val waypoint        = "0.4.2"
 }
 
 scalaVersion := V.Scala
@@ -23,9 +24,10 @@ val Dependencies = new {
   lazy val frontend = Seq(
     libraryDependencies ++=
       Seq(
-        "com.softwaremill.sttp.client3" %%% "core"    % V.sttp,
-        "com.softwaremill.sttp.client3" %%% "circe"   % V.sttp,
-        "com.raquo"                     %%% "laminar" % V.laminar
+        "com.softwaremill.sttp.client3" %%% "core"     % V.sttp,
+        "com.softwaremill.sttp.client3" %%% "circe"    % V.sttp,
+        "com.raquo"                     %%% "laminar"  % V.laminar,
+        "com.raquo"                     %%% "waypoint" % V.waypoint
       )
   )
 
@@ -40,7 +42,7 @@ val Dependencies = new {
   )
 
   lazy val shared = Def.settings(
-    libraryDependencies += "io.circe" %%% "circe-core" % V.circe,
+    libraryDependencies += "io.circe"   %%% "circe-core"  % V.circe,
     libraryDependencies += "org.scodec" %%% "scodec-bits" % V.scodecBits
   )
 

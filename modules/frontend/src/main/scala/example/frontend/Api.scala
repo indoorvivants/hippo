@@ -3,18 +3,12 @@ package hippo.frontend
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-import example.shared.Protocol.*
 import sttp.client3.*
 import sttp.client3.circe.*
 import sttp.capabilities.WebSockets
+import hippo.shared.profile.*
 
-trait Api:
-  def post(
-      search: String,
-      prefixOnly: Boolean = false
-  ): Future[Either[Throwable, GetSuggestions.Response]]
-
-object FutureApi extends Api:
+object FutureApi:
   given backend: SttpBackend[Future, WebSockets] = FetchBackend()
 
   private def ApiHost =
@@ -25,15 +19,13 @@ object FutureApi extends Api:
 
     s"$scheme//$host"
 
-  def post(
-      search: String,
-      prefixOnly: Boolean = false
-  ): Future[Either[Throwable, GetSuggestions.Response]] =
+  def getString(
+      search: StringId,
+  ): Future[Either[Throwable, StringData]] =
 
     val req = basicRequest
-      .post(uri"$ApiHost/get-suggestions")
-      .body(GetSuggestions.Request(search, Some(prefixOnly)))
-      .response(asJson[GetSuggestions.Response])
+      .get(uri"$ApiHost/stringId/${search.id.value.toString}")
+      .response(asJson[StringData])
 
     req.send(backend).map(_.body)
 end FutureApi
