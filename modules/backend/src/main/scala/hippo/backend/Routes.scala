@@ -27,32 +27,40 @@ class Routes(
     Kleisli.liftF {
       IO(println(ex)) *> IO.raiseError(ex)
     }
-  def routes = HttpRoutes.of[IO] {
-    case request @ GET -> Root / "stringId" / sid =>
-      service
-        .getString(StringId.fromLong(sid.toLong))
-        .flatMap(res => Ok(res.asJson))
+  def routes = HttpRoutes
+    .of[IO] {
+      case request @ GET -> Root / "stringId" / sid =>
+        service
+          .getString(StringId.fromLong(sid.toLong))
+          .flatMap(res => Ok(res.asJson))
 
-    case request @ GET -> Root / "frontend" / "app.js" =>
-      StaticFile
-        .fromResource[IO](frontendJS, Some(request))
-        .getOrElseF(NotFound())
+      case request @ GET -> Root / "frontend" / "app.js" =>
+        StaticFile
+          .fromResource[IO](frontendJS, Some(request))
+          .getOrElseF(NotFound())
 
-    case request @ GET -> Root / "frontend" =>
-      StaticFile
-        .fromResource[IO]("index.html", Some(request))
-        .getOrElseF(NotFound())
+      case request @ GET -> Root / "search" / "stringByPrefix" / search =>
+        service
+          .stringByPrefix(search)
+          .flatMap(res => Ok(res.asJson))
 
-    case request @ GET -> "frontend" /: _ =>
-      StaticFile
-        .fromResource[IO]("index.html", Some(request))
-        .getOrElseF(NotFound())
+      case request @ GET -> Root / "frontend" =>
+        StaticFile
+          .fromResource[IO]("index.html", Some(request))
+          .getOrElseF(NotFound())
 
-    case request @ GET -> Root / "assets" / path if staticFileAllowed(path) =>
-      StaticFile
-        .fromResource("/assets/" + path, Some(request))
-        .getOrElseF(NotFound())
-  }.orNotFound.handleErrorWith(printErrors(_))
+      case request @ GET -> "frontend" /: _ =>
+        StaticFile
+          .fromResource[IO]("index.html", Some(request))
+          .getOrElseF(NotFound())
+
+      case request @ GET -> Root / "assets" / path if staticFileAllowed(path) =>
+        StaticFile
+          .fromResource("/assets/" + path, Some(request))
+          .getOrElseF(NotFound())
+    }
+    .orNotFound
+    .handleErrorWith(printErrors(_))
 
   private def staticFileAllowed(path: String) =
     List(".gif", ".js", ".css", ".map", ".html", ".webm").exists(path.endsWith)

@@ -11,6 +11,8 @@ import hippo.shared.profile.*
 object FutureApi:
   given backend: SttpBackend[Future, WebSockets] = FetchBackend()
 
+  type Result[D] = Future[Either[Throwable, D]]
+
   private def ApiHost =
     import org.scalajs.dom
 
@@ -19,8 +21,15 @@ object FutureApi:
 
     s"$scheme//$host"
 
+  def searchStrings(prefix: String): Result[List[RecordData]] =
+    val req = basicRequest
+      .get(uri"$ApiHost/search/stringByPrefix/${prefix}")
+      .response(asJson[List[RecordData]])
+
+    req.send(backend).map(_.body)
+
   def getString(
-      search: StringId,
+      search: StringId
   ): Future[Either[Throwable, StringData]] =
 
     val req = basicRequest

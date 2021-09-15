@@ -65,7 +65,11 @@ abstract class OpaqueId[A](using inv: A =:= Identifier):
   inline def fromLong(l: Long): A    = from(Identifier.from(l))
   inline def to(id: A): Identifier   = inv.apply(id)
 
-  given Codec[A] = Codec[Identifier].asInstanceOf[Codec[A]]
+  given Codec[A] = Codec
+    .from(
+      Decoder[Long].map(fromLong(_)),
+      Encoder[Long].contramap[A](_.id.value)
+    )
 
 opaque type ThreadNameId = Identifier
 object ThreadNameId extends OpaqueId[ThreadNameId]

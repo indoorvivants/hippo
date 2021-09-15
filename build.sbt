@@ -17,7 +17,9 @@ scalaVersion := V.Scala
 
 val Dependencies = new {
   private val http4sModules =
-    Seq("dsl", "ember-client", "ember-server", "circe").map("http4s-" + _)
+    Seq("dsl", "blaze-server", "ember-client", "ember-server", "circe").map(
+      "http4s-" + _
+    )
 
   private val sttpModules = Seq("core", "circe")
 

@@ -1,4 +1,4 @@
-package example.backend
+package heappie.backend
 
 import scala.io.Source
 
@@ -14,7 +14,8 @@ import org.http4s.dsl.*
 import org.http4s.implicits.*
 
 import _root_.io.circe.syntax.*
-import example.shared.Protocol
+import hippo.backend.HeapExplorerService
+import hippo.shared.profile.HeapProfile
 
 object RoutesSpec extends weaver.IOSuite with Http4sDsl[IO]:
   override type Res = Probe
@@ -31,6 +32,13 @@ object RoutesSpec extends weaver.IOSuite with Http4sDsl[IO]:
           responseBody == probe.read("frontend.js")
         )
       }
+  }
+
+  test("serves filtered list of things") { probe =>
+    probe.get(uri"/search/stringByPrefix/catss").zipWithBody.map {
+      case (response, body) =>
+        expect(body == "hello")
+    }
   }
 
   test("serves assets with allowed extensions") { probe =>
@@ -55,38 +63,6 @@ object RoutesSpec extends weaver.IOSuite with Http4sDsl[IO]:
       }
   }
 
-  test("calls the service on /get-suggestions") { probe =>
-    import Protocol.{GetSuggestions as GS}
-
-    val stubResponse = GS.Response(
-      Seq("a", "b", "c", "d")
-    )
-
-    val serviceImpl = new Service:
-      override def getSuggestions(
-          request: GS.Request
-      ): IO[GS.Response] = IO(stubResponse)
-
-    val request = GS.Request("hello!")
-
-    probe
-      .copy(serviceImpl = serviceImpl)
-      .routes()
-      .run(
-        Request(
-          POST,
-          uri"/get-suggestions"
-        ).withEntity(request)
-      )
-      .zipWithBody
-      .map { case (response, responseBody) =>
-        expect.all(
-          response.status.code == 200,
-          responseBody == stubResponse.asJson.noSpaces
-        )
-      }
-  }
-
   extension (resp: IO[Response[IO]])
     def readBody: IO[String] =
       resp.flatMap(_.bodyText.compile.toVector.map(_.mkString))
@@ -96,7 +72,9 @@ object RoutesSpec extends weaver.IOSuite with Http4sDsl[IO]:
 end RoutesSpec
 
 case class Probe(
-    serviceImpl: Service = ServiceImpl,
+    serviceImpl: HeapExplorerService = new HeapExplorerService.Impl(
+      HeapProfile.empty
+    ),
     frontendFile: String = "test-file"
 ):
   val classloader = getClass().getClassLoader()
@@ -114,11 +92,11 @@ case class Probe(
   )
 
   def routes() =
-    new Routes(serviceImpl, frontendFile).routes.orNotFound
+    new hippo.backend.Routes(serviceImpl, frontendFile).routes
 
   def routes(frontendJs: String) =
-    new Routes(serviceImpl, frontendJs).routes.orNotFound
+    new hippo.backend.Routes(serviceImpl, frontendJs).routes
 
-  def routes(service: Service, frontendJs: String) =
-    new Routes(service, frontendJs).routes.orNotFound
+  def routes(service: HeapExplorerService, frontendJs: String) =
+    new hippo.backend.Routes(service, frontendJs).routes
 end Probe
