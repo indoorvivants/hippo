@@ -29,9 +29,13 @@ class Routes(
     }
   def routes = HttpRoutes
     .of[IO] {
-      case request @ GET -> Root / "stringId" / sid =>
+      case request @ GET -> Root / "api" / "stringId" / sid =>
         service
           .getString(StringId.fromLong(sid.toLong))
+          .flatMap(res => Ok(res.asJson))
+
+      case request @ GET -> Root / "api" / "summary" =>
+        service.getSummary
           .flatMap(res => Ok(res.asJson))
 
       case request @ GET -> Root / "frontend" / "app.js" =>
@@ -39,7 +43,7 @@ class Routes(
           .fromResource[IO](frontendJS, Some(request))
           .getOrElseF(NotFound())
 
-      case request @ GET -> Root / "search" / "stringByPrefix" / search =>
+      case request @ GET -> Root / "api" / "search" / "stringByPrefix" / search =>
         service
           .stringByPrefix(search)
           .flatMap(res => Ok(res.asJson))

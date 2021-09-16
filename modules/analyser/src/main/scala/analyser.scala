@@ -14,4 +14,3 @@ object Analyser:
 
     value.records.take(5).foreach(println)
     value
-    
