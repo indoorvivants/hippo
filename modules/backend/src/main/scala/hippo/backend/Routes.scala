@@ -47,21 +47,22 @@ class Routes(
         service
           .stringByPrefix(search)
           .flatMap(res => Ok(res.asJson))
-
-      case request @ GET -> Root / "frontend" =>
-        StaticFile
-          .fromResource[IO]("index.html", Some(request))
-          .getOrElseF(NotFound())
-
-      case request @ GET -> "frontend" /: _ =>
-        StaticFile
-          .fromResource[IO]("index.html", Some(request))
-          .getOrElseF(NotFound())
-
+      
       case request @ GET -> Root / "assets" / path if staticFileAllowed(path) =>
         StaticFile
           .fromResource("/assets/" + path, Some(request))
           .getOrElseF(NotFound())
+
+      case request @ GET -> Root =>
+        StaticFile
+          .fromResource[IO]("index.html", Some(request))
+          .getOrElseF(NotFound())
+
+      case request @ GET -> anything =>
+        StaticFile
+          .fromResource[IO]("index.html", Some(request))
+          .getOrElseF(NotFound())
+
     }
     .orNotFound
     .handleErrorWith(printErrors(_))

@@ -30,16 +30,16 @@ object Page:
   def stringRoute = Route[StringPage, Long](
     encode = userPage => userPage.stringId.id.value,
     decode = arg => StringPage(StringId.fromLong(arg)),
-    pattern = root / "frontend" / "string" / segment[Long] / endOfSegments
+    pattern = root / "page" / "string" / segment[Long] / endOfSegments
   )
 
   def classRoute = Route[ClassPage, Long](
     encode = userPage => userPage.classId.id.value,
     decode = arg => ClassPage(ClassId.fromLong(arg)),
-    pattern = root / "frontend" / "class" / segment[Long] / endOfSegments
+    pattern = root / "page" / "class" / segment[Long] / endOfSegments
   )
 
-  def mainRoute = Route.static(MainPage, root / "frontend" / endOfSegments)
+  def mainRoute = Route.static(MainPage, root / endOfSegments)
 
   val router = new Router[Page](
     routes = List(classRoute, stringRoute, mainRoute),
