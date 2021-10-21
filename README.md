@@ -1,64 +1,24 @@
-# http4s-laminar-stack ![build](https://github.com/keynmol/http4s-laminar-stack/workflows/build/badge.svg)
+# Hippo
 
-Example of 
+> A web-based heap dump viewer in full-stack Scala
 
-1. Client written with [Laminar](https://github.com/raquo/Laminar), interacting with server using [sttp](https://github.com/softwaremill/sttp)
+Status (as of **October 2021**): 
 
-2. Server with http4s serving both the compiled Javascript for the client and an endpoint for server-side interactions
+I am actively trying to abandon this project as I've learnt what I wanted from
+it. But it's hard. There's something so cool about it (mostly scodec part).
 
-3. Shared code with **protocol** definitions
+## About
 
-4. Gzip compression on the server side
+This project serves purely as an exercise for learning [scodec](https://github.com/scodec/scodec) and [Waypoint](https://github.com/raquo/waypoint). As well as Scala 3 and its new syntax.
 
-5. Docker packaging of the full application
+The main purpose of it is to provide a self-contained app that you can launch by
+pointing at a heap dump, and have it analysed in a nice web-based interface.
 
-6. Tests for the client with simulated DOM using [jsdom](https://github.com/scala-js/scala-js-env-jsdom-nodejs)
+It should be as simple as running this:
 
-## Development mode
+> backend/run --hprof heapdump-1631032668990.hprof --port 1111
 
-Run in SBT (uses fast JS compilation, not optimized):
+And then opening http://localhost:1111 to see this interface:
 
-```
-sbt> ~runDev
-```
+// TODO: add interface GIF
 
-And open http://localhost:9000/frontend
-
-This will restart the server on any changes: shared code, client/server, assets.
-
-## Tests
-It is a prerequisite to have jsdom installed, in order for the frontend tests to run. Proposal:
-```
-yarn add jsdom
-```
-Then move into an sbt console and run tests as normal
-
-## Production mode
-
-Run in SBT (uses full JS optimization):
-
-```
-sbt> ~runProd
-```
-
-## Docker packaging 
-
-```
-sbt> backend/docker:publishLocal
-```
-
-Will publish the docker image with fully optimised JS code, and you can run the container:
-
-```bash
-✗ docker run --rm -p 8080:8080 backend:0.1.0-SNAPSHOT
-
-SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
-SLF4J: Defaulting to no-operation (NOP) logger implementation
-SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
-Running server on http://0.0.0.0:8080 (mode: prod)
-```
-
-
-The interface is fairly simple:
-
-![](https://imgur.com/S0f0i8i.png)
