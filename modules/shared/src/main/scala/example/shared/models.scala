@@ -60,10 +60,13 @@ case class TimeShift(shift: Int)
 case class Length(value: Int)
 
 abstract class OpaqueId[A](using inv: A =:= Identifier):
-  extension (d: A) def id            = inv.apply(d)
+  extension (d: A) 
+    inline def id            = inv.apply(d)
+    inline def as[T](inline companion: OpaqueId[T]): T = companion.fromLong(inv.apply(d).value)  
   inline def from(id: Identifier): A = inv.flip.apply(id)
   inline def fromLong(l: Long): A    = from(Identifier.from(l))
   inline def to(id: A): Identifier   = inv.apply(id)
+
 
   given Codec[A] = Codec
     .from(

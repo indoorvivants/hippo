@@ -18,6 +18,7 @@ object Page:
       case StringPage(id) => "StringPage" + id.id.value.toString
       case MainPage       => "MainPage"
 
+  // TODO: this is pretty bad and so much maintenance
   def fromStr(s: String) =
     val segments = s.split(":")
     segments.headOption match
