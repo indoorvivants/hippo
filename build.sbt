@@ -1,15 +1,15 @@
 val V = new {
-  val Scala = "3.1.0-RC2"
+  val Scala = "3.1.0"
 
-  val laminar         = "0.13.0"
-  val http4s          = "0.23.2"
-  val sttp            = "3.3.13"
+  val laminar         = "0.13.1"
+  val http4s          = "0.23.6"
+  val sttp            = "3.3.15"
   val circe           = "0.14.1"
-  val decline         = "2.1.0"
+  val decline         = "2.2.0"
   val organiseImports = "0.5.0"
-  val weaver          = "0.7.6"
+  val weaver          = "0.7.7"
   val scodec          = "2.0.0"
-  val scodecBits      = "1.1.28"
+  val scodecBits      = "1.1.29"
   val waypoint        = "0.4.2"
 }
 
