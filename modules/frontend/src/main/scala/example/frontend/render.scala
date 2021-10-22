@@ -71,9 +71,9 @@ def renderPage(page: Page)(using Router[Page]) =
       )
 
 def renderSummary(sums: Summary) =
-  val rendered = sums.recordTypes.map(_._2).map(i => s"$i records")
+  val rendered  = sums.recordTypes.map(_._2).map(i => s"$i records")
   val maxLength = rendered.map(_.length).max
-  val padded = rendered.map(_.padTo(maxLength, ' '))
+  val padded    = rendered.map(_.padTo(maxLength, ' '))
   ul(
     sums.recordTypes.zip(rendered).map { case ((tag, _), rnd) =>
       li(pre(b(rnd), nbsp, span(tag.toString)))

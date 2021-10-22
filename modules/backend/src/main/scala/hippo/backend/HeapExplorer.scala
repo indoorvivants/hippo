@@ -10,7 +10,6 @@ trait HeapExplorerService:
   def stringByPrefix(search: String): IO[List[RecordData]]
   def getSummary: IO[Summary]
 
-
 object HeapExplorerService:
   import RecordData as rd
   import StringData as sd
@@ -24,11 +23,32 @@ object HeapExplorerService:
       case (id, rec @ RecordData.Strings(_, sd.Valid(data))) =>
         data -> rec
     }
-    
+
     lazy val invalidStrings = stringMap.collect {
       case (id, rec @ RecordData.Strings(_, sd.Invalid(data))) =>
         id -> data
     }
+
+    lazy val loadedClasses = profile.records.collect {
+      case Record(_, _, _, s: rd.LoadClass) =>
+        s.classNameId.as(StringId) -> s
+    }
+
+    loadedClasses.foreach { case (strId, lc) =>
+      println(stringMap.get(strId))
+      println(lc)
+    }
+
+    val segmentTypes =
+      profile.records
+        .find(_.tag == Tag.HeapDumpSegment)
+        .collect { case Record(_, _, _, rd.HeapDumpSegment(seg)) =>
+          import scala.util.chaining.*
+          println(seg.head)
+          seg.groupBy(_.getClass.toString).mapValues(_.size).toMap.tap(println)
+        }
+
+    println(stringMap.get(StringId.fromLong(31049838016L)))
 
     println(invalidStrings.keySet.take(5))
 

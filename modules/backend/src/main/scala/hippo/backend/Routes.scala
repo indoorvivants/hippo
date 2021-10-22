@@ -47,7 +47,7 @@ class Routes(
         service
           .stringByPrefix(search)
           .flatMap(res => Ok(res.asJson))
-      
+
       case request @ GET -> Root / "assets" / path if staticFileAllowed(path) =>
         StaticFile
           .fromResource("/assets/" + path, Some(request))
