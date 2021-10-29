@@ -53,6 +53,7 @@ object ConstantPoolIndex extends OpaqueIntegral[ConstantPoolIndex, Int]
 opaque type StackTraceSerialNumber = Int
 object StackTraceSerialNumber
     extends OpaqueIntegral[StackTraceSerialNumber, Int]
+
 opaque type ThreadSerialNumber = Int
 object ThreadSerialNumber extends OpaqueIntegral[ThreadSerialNumber, Int]
 
@@ -64,9 +65,9 @@ abstract class OpaqueId[A](using inv: A =:= Identifier):
     inline def id = inv.apply(d)
     inline def as[T](inline companion: OpaqueId[T]): T =
       companion.fromLong(inv.apply(d).value)
-  inline def from(id: Identifier): A = inv.flip.apply(id)
-  inline def fromLong(l: Long): A    = from(Identifier.from(l))
-  inline def to(id: A): Identifier   = inv.apply(id)
+  inline def from(inline id: Identifier): A = inv.flip.apply(id)
+  inline def fromLong(inline l: Long): A    = from(Identifier.from(l))
+  inline def to(inline id: A): Identifier   = inv.apply(id)
 
   given Codec[A] = Codec
     .from(

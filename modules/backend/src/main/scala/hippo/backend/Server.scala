@@ -7,6 +7,7 @@ import org.http4s.implicits.*
 import org.http4s.server.middleware.GZip
 import fs2.io.file.Path
 import org.http4s.blaze.server.BlazeServerBuilder
+import hippo.backend.views.Views
 
 object HipsterServer extends IOApp:
   def resource(service: HeapExplorerService, config: ServerConfig) =
@@ -44,8 +45,9 @@ object HipsterServer extends IOApp:
             .flatMap { bv =>
               IO.println(bv.take(5)) *>
                 IO.println("Starting to read the file...") *>
-                IO.blocking(hippo.analyse.Analyser.analyse(bv)) <*
-                IO.println("Finished reading the file")
+                IO.blocking(hippo.analyse.Analyser.analyse(bv))
+                  .flatTap(hp => IO(Views(hp).threadMap))
+                <* IO.println("Finished reading the file")
             }
             .map(HeapExplorerService.Impl(_))
 

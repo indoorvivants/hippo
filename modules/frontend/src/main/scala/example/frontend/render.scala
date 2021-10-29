@@ -17,58 +17,65 @@ def renderByteVector(bv: ByteVector) =
 
   pre(code(sb.result))
 
+def renderStringPage(strId: StringId) =
+  div(
+    h2("String"),
+    strong("ID: "),
+    span(strId.id.value.toString),
+    div(
+      child <-- Api.getString(strId).map {
+        case None            => i("loading")
+        case Some(Left(err)) => b(err.toString)
+        case Some(Right(StringData.Valid(s))) =>
+          div(
+            "✅ Valid UTF-8 String",
+            pre(code(s))
+          )
+
+        case Some(Right(StringData.Invalid(bytes))) =>
+          div(
+            "❌ Invalid UTF-8 data stored in String space",
+            renderByteVector(bytes.toByteVector)
+          )
+      }
+    )
+  )
+
+def renderClassPage(classId: ClassId) =
+  div("Class page " + classId.toString)
+
+def renderMainPage(using Router[Page]) =
+  val sb = SearchBox.create
+
+  div(
+    div(
+      child <-- Api.getSummary.map(_.get.right.get).map(renderSummary)
+    ),
+    h2("Search strings (by prefix only for now)"),
+    sb.node,
+    child <-- sb.signal.flatMap { search =>
+      if search.isEmpty then Signal.fromValue(b("..."))
+      else
+        Api.searchStrings(search).map { res =>
+          res match
+            case Some(Right(lst)) =>
+              ul(
+                lst.take(100).collect {
+                  case RecordData.Strings(sid, StringData.Valid(s)) =>
+                    li(magicLink(Page.StringPage(sid), s))
+                }
+              )
+            case other => div(other.toString)
+        }
+    }
+  )
+end renderMainPage
+
 def renderPage(page: Page)(using Router[Page]) =
   page match
-    case Page.ClassPage(classId) =>
-      div("Class page " + classId.toString)
-    case Page.StringPage(strId) =>
-      div(
-        h2("String"),
-        strong("ID: "),
-        span(strId.id.value.toString),
-        div(
-          child <-- Api.getString(strId).map {
-            case None            => i("loading")
-            case Some(Left(err)) => b(err.toString)
-            case Some(Right(StringData.Valid(s))) =>
-              div(
-                "✅ Valid UTF-8 String",
-                pre(code(s))
-              )
-
-            case Some(Right(StringData.Invalid(bytes))) =>
-              div(
-                "❌ Invalid UTF-8 data stored in String space",
-                renderByteVector(bytes.toByteVector)
-              )
-          }
-        )
-      )
-    case Page.MainPage =>
-      val sb = SearchBox.create
-
-      div(
-        div(
-          child <-- Api.getSummary.map(_.get.right.get).map(renderSummary)
-        ),
-        h2("Search strings (by prefix only for now)"),
-        sb.node,
-        child <-- sb.signal.flatMap { search =>
-          if search.isEmpty then Signal.fromValue(b("..."))
-          else
-            Api.searchStrings(search).map { res =>
-              res match
-                case Some(Right(lst)) =>
-                  ul(
-                    lst.take(100).collect {
-                      case RecordData.Strings(sid, StringData.Valid(s)) =>
-                        li(magicLink(Page.StringPage(sid), s))
-                    }
-                  )
-                case other => div(other.toString)
-            }
-        }
-      )
+    case Page.ClassPage(classId) => renderClassPage(classId)
+    case Page.StringPage(strId)  => renderStringPage(strId)
+    case Page.MainPage           => renderMainPage
 
 def renderSummary(sums: Summary) =
   val rendered  = sums.recordTypes.map(_._2).map(i => s"$i records")

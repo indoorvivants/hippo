@@ -34,17 +34,17 @@ object HeapExplorerService:
         s.classNameId.as(StringId) -> s
     }
 
-    loadedClasses.foreach { case (strId, lc) =>
+    loadedClasses.take(100).foreach { case (strId, lc) =>
       println(stringMap.get(strId))
       println(lc)
     }
 
-    val segmentTypes =
+    val segmentTypes: Option[Map[String, Int]] =
       profile.records
         .find(_.tag == Tag.HeapDumpSegment)
         .collect { case Record(_, _, _, rd.HeapDumpSegment(seg)) =>
           import scala.util.chaining.*
-          println(seg.head)
+          // println(seg.head)
           seg.groupBy(_.getClass.toString).mapValues(_.size).toMap.tap(println)
         }
 
