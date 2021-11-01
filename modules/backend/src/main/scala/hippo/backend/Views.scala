@@ -1,4 +1,4 @@
-package hippo.backend.views
+package hippo.backend
 
 import io.circe.Codec
 import hippo.shared.profile.*
@@ -10,14 +10,14 @@ case class LoadedClass(
 
 case class LoadedStackTrace(
     threadName: String
-)
+) derives Codec.AsObject
 
 case class StackFrame(
     methodName: String,
     sourceFileName: String,
     className: String,
     lineNumber: LineInformation
-)
+) derives Codec.AsObject
 
 class Views private (profile: HeapProfile):
   import RecordData.*
@@ -33,7 +33,6 @@ class Views private (profile: HeapProfile):
 
   lazy val hdTypes =
     heapData.groupBy(_.getClass.getSimpleName).foreach { case (s, samples) =>
-      println(s)
       println(samples.take(5))
     }
 
@@ -45,8 +44,3 @@ end Views
 
 object Views:
   def apply(prof: HeapProfile) = new Views(prof)
-
-// private lazy val stackTraces: Seq[LoadedStackTrace] =
-//   records.collect {
-//     case StackTrace()
-//   }

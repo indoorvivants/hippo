@@ -7,7 +7,7 @@ import org.http4s.implicits.*
 import org.http4s.server.middleware.GZip
 import fs2.io.file.Path
 import org.http4s.blaze.server.BlazeServerBuilder
-import hippo.backend.views.Views
+import hippo.backend.Views
 
 object HipsterServer extends IOApp:
   def resource(service: HeapExplorerService, config: ServerConfig) =

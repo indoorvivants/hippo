@@ -34,39 +34,32 @@ object HeapExplorerService:
         s.classNameId.as(StringId) -> s
     }
 
-    loadedClasses.take(100).foreach { case (strId, lc) =>
-      println(stringMap.get(strId))
-      println(lc)
-    }
-
-    val segmentTypes: Option[Map[String, Int]] =
+    lazy val segmentTypes =
       profile.records
         .find(_.tag == Tag.HeapDumpSegment)
         .collect { case Record(_, _, _, rd.HeapDumpSegment(seg)) =>
           import scala.util.chaining.*
-          // println(seg.head)
           seg.groupBy(_.getClass.toString).mapValues(_.size).toMap.tap(println)
         }
 
-    println(stringMap.get(StringId.fromLong(31049838016L)))
-
-    println(invalidStrings.keySet.take(5))
-
-    lazy val summaryByType =
+    lazy val heapDataByType =
       profile.records
         .map(_.tag)
         .groupBy(identity)
         .transform((_, v) => v.size)
         .toList
 
+
     override def getString(sid: StringId) =
       IO.fromOption(stringMap.get(sid).map(_.content))(Err.StringNotFound(sid))
 
     override def getLoadedClass(id: ClassId) = ???
+    
     override def stringByPrefix(search: String) =
       IO(validStrings.filter(_._1.startsWith(search)).map(_._2).toList)
+
     override def getSummary =
-      IO(summaryByType).map(Summary.apply)
+      IO(heapDataByType).product(IO(segmentTypes.toList.flatMap(_.toList))).map(Summary.apply)
   end Impl
 end HeapExplorerService
 

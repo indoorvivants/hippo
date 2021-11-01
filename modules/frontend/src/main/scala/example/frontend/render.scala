@@ -83,9 +83,18 @@ def renderSummary(sums: Summary) =
   val padded    = rendered.map(_.padTo(maxLength, ' '))
   ul(
     sums.recordTypes.zip(rendered).map { case ((tag, _), rnd) =>
-      li(pre(b(rnd), nbsp, span(tag.toString)))
+      val segmentRender = pre(b(rnd), nbsp, span(tag.toString))
+      if tag == Tag.HeapDumpSegment then
+        li(
+          segmentRender,
+          ul(sums.heapDataTypes.map { case (name, cnt) =>
+            li(b(cnt), " ", name)
+          })
+        )
+      else li(segmentRender)
     }
   )
+end renderSummary
 
 def magicLink(page: Page, text: String)(using router: Router[Page]) = a(
   href := router.absoluteUrlForPage(page),
@@ -97,6 +106,7 @@ object Render:
   val app: Div =
     given router: Router[Page] = Page.router
     div(
-      h1("Hipster"),
+      h1("Hippo"),
+      small("Unfinished, untidy heap dump browser"),
       child <-- router.$currentPage.map(renderPage)
     )
