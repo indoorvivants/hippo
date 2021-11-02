@@ -44,7 +44,7 @@ object Identifier:
 
   private val enc: Encoder[Identifier] = Encoder.encodeLong
   private val dec: Decoder[Identifier] = Decoder.decodeLong
-  given Codec[Identifier] = Codec.from(dec, enc)
+  given Codec[Identifier]              = Codec.from(dec, enc)
 
 opaque type ClassSerialNumber = Int
 object ClassSerialNumber extends OpaqueIntegral[ClassSerialNumber, Int]

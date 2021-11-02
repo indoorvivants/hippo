@@ -3,63 +3,54 @@ package hippo.backend
 import hippo.shared.profile.*
 import cats.effect.*
 import hippo.shared.profile.RecordData.Strings
+import HeapData as hd
+import RecordData as rd
+import StringData as sd
+import io.circe.Codec
 
 trait HeapExplorerService:
   def getString(sid: StringId): IO[StringData]
+  def getPrimitiveArray(aid: ArrayId): IO[hd.PrimitiveArrayDump]
+  def getObjectArray(aid: ArrayId): IO[hd.ObjectArrayDump]
   def getLoadedClass(id: ClassId): IO[Option[String]]
   def stringByPrefix(search: String): IO[List[RecordData]]
   def getSummary: IO[Summary]
 
 object HeapExplorerService:
-  import RecordData as rd
-  import StringData as sd
   class Impl(profile: HeapProfile) extends HeapExplorerService:
-    lazy val stringMap: Map[StringId, Strings] = profile.records.collect {
-      case Record(_, _, _, s @ rd.Strings(id, _)) =>
-        id -> s
-    }.toMap
+    val views = Views(profile)
+    import views.*
 
-    lazy val validStrings: Map[String, Strings] = stringMap.collect {
-      case (id, rec @ RecordData.Strings(_, sd.Valid(data))) =>
-        data -> rec
-    }
-
-    lazy val invalidStrings = stringMap.collect {
-      case (id, rec @ RecordData.Strings(_, sd.Invalid(data))) =>
-        id -> data
-    }
-
-    lazy val loadedClasses = profile.records.collect {
-      case Record(_, _, _, s: rd.LoadClass) =>
-        s.classNameId.as(StringId) -> s
-    }
-
-    lazy val segmentTypes =
-      profile.records
-        .find(_.tag == Tag.HeapDumpSegment)
-        .collect { case Record(_, _, _, rd.HeapDumpSegment(seg)) =>
-          import scala.util.chaining.*
-          seg.groupBy(_.getClass.toString).mapValues(_.size).toMap.tap(println)
-        }
-
-    lazy val heapDataByType =
-      profile.records
-        .map(_.tag)
-        .groupBy(identity)
-        .transform((_, v) => v.size)
-        .toList
-
+    arrayMap.toIterator.collect {
+      case (id, _: hd.PrimitiveArrayDump) => println(s"Primitive array: $id")
+    }.take(5).toList
+    
+    arrayMap.toIterator.collect {
+      case (id, _: hd.ObjectArrayDump) => println(s"Object array: $id")
+    }.take(5).toList
 
     override def getString(sid: StringId) =
       IO.fromOption(stringMap.get(sid).map(_.content))(Err.StringNotFound(sid))
 
     override def getLoadedClass(id: ClassId) = ???
-    
+
     override def stringByPrefix(search: String) =
       IO(validStrings.filter(_._1.startsWith(search)).map(_._2).toList)
 
+    override def getPrimitiveArray(aid: ArrayId) =
+      IO.fromOption(arrayMap.get(aid).collect { case p: hd.PrimitiveArrayDump =>
+        p
+      })(Err.ArrayNotFound(aid))
+
+    override def getObjectArray(aid: ArrayId) =
+      IO.fromOption(arrayMap.get(aid).collect { case p: hd.ObjectArrayDump =>
+        p
+      })(Err.ArrayNotFound(aid))
+
     override def getSummary =
-      IO(heapDataByType).product(IO(segmentTypes.toList.flatMap(_.toList))).map(Summary.apply)
+      IO(views.heapDataByType)
+        .product(IO(views.segmentTypes.toList.flatMap(_.toList)))
+        .map(Summary.apply)
   end Impl
 end HeapExplorerService
 
@@ -67,4 +58,7 @@ sealed trait Err
 object Err:
   case class StringNotFound(sid: StringId)
       extends Exception(s"String with $sid not found"),
+        Err
+  case class ArrayNotFound(aid: ArrayId)
+      extends Exception(s"Array with $aid not found"),
         Err

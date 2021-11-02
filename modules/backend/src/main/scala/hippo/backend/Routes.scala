@@ -18,6 +18,8 @@ import cats.data.Kleisli
 import org.http4s.{Response, Request}
 import cats.syntax.all.*
 import org.http4s.dsl.*
+import _root_.io.circe.Encoder
+import _root_.io.circe.Codec
 
 class Routes(
     service: HeapExplorerService,
@@ -27,12 +29,27 @@ class Routes(
     Kleisli.liftF {
       IO(println(ex)) *> IO.raiseError(ex)
     }
+  
+  // not sure why I have to do this here..
+  given Codec[HeapData.PrimitiveArrayDump] = Codec.AsObject.derived[HeapData.PrimitiveArrayDump]
+  given Codec[HeapData.ObjectArrayDump] = Codec.AsObject.derived[HeapData.ObjectArrayDump]
+
   def routes = HttpRoutes
     .of[IO] {
       case request @ GET -> Root / "api" / "stringId" / sid =>
         service
           .getString(StringId.fromLong(sid.toLong))
           .flatMap(res => Ok(res.asJson))
+
+      case request @ GET -> Root / "api" / "primitiveArray" / aid =>
+        service
+          .getPrimitiveArray(ArrayId.fromLong(aid.toLong))
+          .flatMap(res => Ok.apply(res.asJson))
+      
+      case request @ GET -> Root / "api" / "objectArray" / aid =>
+        service
+          .getObjectArray(ArrayId.fromLong(aid.toLong))
+          .flatMap(res => Ok.apply(res.asJson))
 
       case request @ GET -> Root / "api" / "summary" =>
         service.getSummary
