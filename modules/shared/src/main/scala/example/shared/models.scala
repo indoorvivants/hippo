@@ -42,7 +42,9 @@ object Identifier:
   extension (d: Identifier) def value: Long = d
   inline def from(id: Long): Identifier     = id
 
-  given Codec[Identifier] = Codec[Long]
+  private val enc: Encoder[Identifier] = Encoder.encodeLong
+  private val dec: Decoder[Identifier] = Decoder.decodeLong
+  given Codec[Identifier] = Codec.from(dec, enc)
 
 opaque type ClassSerialNumber = Int
 object ClassSerialNumber extends OpaqueIntegral[ClassSerialNumber, Int]

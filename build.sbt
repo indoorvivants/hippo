@@ -26,10 +26,11 @@ val Dependencies = new {
   lazy val frontend = Seq(
     libraryDependencies ++=
       Seq(
-        "com.softwaremill.sttp.client3" %%% "core"     % V.sttp,
-        "com.softwaremill.sttp.client3" %%% "circe"    % V.sttp,
-        "com.raquo"                     %%% "laminar"  % V.laminar,
-        "com.raquo"                     %%% "waypoint" % V.waypoint
+        "com.softwaremill.sttp.client3" %%% "core"         % V.sttp,
+        "com.softwaremill.sttp.client3" %%% "circe"        % V.sttp,
+        "io.circe"                      %%% "circe-parser" % V.circe,
+        "com.raquo"                     %%% "laminar"      % V.laminar,
+        "com.raquo"                     %%% "waypoint"     % V.waypoint
       )
   )
 
@@ -45,11 +46,13 @@ val Dependencies = new {
 
   lazy val shared = Def.settings(
     libraryDependencies += "io.circe"   %%% "circe-core"  % V.circe,
+    libraryDependencies += "io.circe"   %%% "circe-parser"  % V.circe % Test,
     libraryDependencies += "org.scodec" %%% "scodec-bits" % V.scodecBits
   )
 
   lazy val tests = Def.settings(
     libraryDependencies += "com.disneystreaming" %%% "weaver-cats" % V.weaver % Test,
+    libraryDependencies += "com.disneystreaming" %%% "weaver-scalacheck" % V.weaver % Test,
     testFrameworks += new TestFramework("weaver.framework.CatsEffect")
   )
 }
@@ -103,7 +106,7 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .jvmSettings(commonBuildSettings)
   .settings(
     scalacOptions ++= Seq("-Xmax-inlines", "100")
-  )
+  ).settings(Dependencies.tests)
 
 lazy val analyser = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
