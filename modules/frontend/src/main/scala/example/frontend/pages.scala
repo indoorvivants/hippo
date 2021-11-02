@@ -6,52 +6,54 @@ import hippo.shared.profile.*
 import com.raquo.waypoint.*
 import io.circe.syntax.*
 
-enum Page:
+enum Page derives Codec.AsObject:
   case ClassPage(classId: ClassId)
   case StringPage(stringId: StringId)
+  case ArrayDumpPage(arrayId: ArrayId)
   case MainPage
 
+  def title =
+    this match
+      case _: ClassPage     => "Hippo: class page"
+      case _: StringPage    => "Hippo: string pages"
+      case _: ArrayDumpPage => "Hippo: array dump"
+      case _                => "Hippo"
+
 object Page:
-  def toStr(p: Page) =
-    p match
-      case ClassPage(id)  => "ClassPage:" + id.id.value.toString
-      case StringPage(id) => "StringPage" + id.id.value.toString
-      case MainPage       => "MainPage"
+  def toStr(p: Page) = p.asJson.noSpacesSortKeys
 
-  // TODO: this is pretty bad and so much maintenance
   def fromStr(s: String) =
-    val segments = s.split(":")
-    segments.headOption match
-      case Some("ClassPage") => ClassPage(ClassId.fromLong(segments(1).toLong))
-      case Some("StringPage") =>
-        StringPage(StringId.fromLong(segments(1).toLong))
-      case Some("MainPage") => MainPage
-      case other => throw new RuntimeException(s"Unrecognised page: $$other")
-
-  def stringRoute = Route[StringPage, Long](
-    encode = userPage => userPage.stringId.id.value,
-    decode = arg => StringPage(StringId.fromLong(arg)),
-    pattern = root / "page" / "string" / segment[Long] / endOfSegments
-  )
-
-  def classRoute = Route[ClassPage, Long](
-    encode = userPage => userPage.classId.id.value,
-    decode = arg => ClassPage(ClassId.fromLong(arg)),
-    pattern = root / "page" / "class" / segment[Long] / endOfSegments
-  )
-
-  def mainRoute = Route.static(MainPage, root / endOfSegments)
+    import io.circe.parser.parse
+    import io.circe.syntax.given
+    parse(s)
+      .getOrElse(throw new RuntimeException(s"Unrecognised page: $s"))
+      .as[Page]
+      .getOrElse(throw new RuntimeException(s"Unrecognised page: $s"))
 
   val router = new Router[Page](
-    routes = List(classRoute, stringRoute, mainRoute),
-    getPageTitle =
-      _.toString, // mock page title (displayed in the browser tab next to favicon)
-    serializePage =
-      Page.toStr(_), // serialize page data for storage in History API log
+    routes = List(
+      Route[ClassPage, Long](
+        encode = userPage => userPage.classId.id.value,
+        decode = arg => ClassPage(ClassId.fromLong(arg)),
+        pattern = root / "page" / "class" / segment[Long] / endOfSegments
+      ),
+      Route[StringPage, Long](
+        encode = userPage => userPage.stringId.id.value,
+        decode = arg => StringPage(StringId.fromLong(arg)),
+        pattern = root / "page" / "string" / segment[Long] / endOfSegments
+      ),
+      Route[ArrayDumpPage, Long](
+        encode = arrayPage => arrayPage.arrayId.id.value,
+        decode = arg => ArrayDumpPage(ArrayId.fromLong(arg)),
+        pattern = root / "page" / "array" / segment[Long] / endOfSegments
+      ),
+      Route.static(MainPage, root / endOfSegments)
+    ),
+    getPageTitle = _.title,
+    serializePage = Page.toStr(_),
     deserializePage = Page.fromStr(_)
   )(
-    $popStateEvent =
-      L.windowEvents.onPopState, // this is how Waypoint avoids an explicit dependency on Laminar
-    owner = L.unsafeWindowOwner // this router will live as long as the window
+    $popStateEvent = L.windowEvents.onPopState,
+    owner = L.unsafeWindowOwner
   )
 end Page

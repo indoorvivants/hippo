@@ -31,8 +31,9 @@ class Routes(
     }
   
   // not sure why I have to do this here..
-  given Codec[HeapData.PrimitiveArrayDump] = Codec.AsObject.derived[HeapData.PrimitiveArrayDump]
-  given Codec[HeapData.ObjectArrayDump] = Codec.AsObject.derived[HeapData.ObjectArrayDump]
+  import HeapData as hd
+  given Encoder[hd.PrimitiveArrayDump] = Encoder[HeapData].contramap[hd.PrimitiveArrayDump](identity)
+  given Encoder[hd.ObjectArrayDump] = Encoder[HeapData].contramap[hd.ObjectArrayDump](identity)
 
   def routes = HttpRoutes
     .of[IO] {

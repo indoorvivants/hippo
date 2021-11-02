@@ -73,9 +73,13 @@ end renderMainPage
 
 def renderPage(page: Page)(using Router[Page]) =
   page match
-    case Page.ClassPage(classId) => renderClassPage(classId)
-    case Page.StringPage(strId)  => renderStringPage(strId)
-    case Page.MainPage           => renderMainPage
+    case Page.ClassPage(classId)   => renderClassPage(classId)
+    case Page.StringPage(strId)    => renderStringPage(strId)
+    case Page.MainPage             => renderMainPage
+    case Page.ArrayDumpPage(arrId) => renderArrayPage(arrId)
+
+def renderArrayPage(id: ArrayId) = 
+  div(s"rendering $id")
 
 def renderSummary(sums: Summary) =
   val rendered  = sums.recordTypes.map(_._2).map(i => s"$i records")
