@@ -5,11 +5,9 @@ import hippo.frontend.components.SearchBox
 import hippo.shared.profile.*
 import scodec.bits.ByteVector
 
-/**
- * This file contains various functions
- * that render the data and pages as Laminar's reactive
- * elements
- */
+/** This file contains various functions that render the data and pages as
+  * Laminar's reactive elements
+  */
 
 def renderByteVector(bv: ByteVector) =
   val sb   = StringBuilder()
@@ -22,6 +20,7 @@ def renderByteVector(bv: ByteVector) =
     i += 1
 
   pre(code(sb.result))
+end renderByteVector
 
 extension [T](st: Signal[Option[Either[Throwable, T]]])
   def handled(f: T => Element) = st.map {
