@@ -86,7 +86,7 @@ end renderMainPage
 def renderPage(page: Page)(using Router[Page]) =
   div(
     className := styles.cls.container,
-    h1(cls := styles.cls.heading, "Hippos"),
+    h1(cls := styles.cls.heading, "Hippo"),
     p(
       cls := styles.cls.description,
       "Unfinished, untidy heap dump browser (it will never be finished)"
