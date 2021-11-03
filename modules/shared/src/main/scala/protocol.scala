@@ -7,4 +7,5 @@ case class Summary(
     biggestArrays: List[PrimitiveArrayGist]
 ) derives Codec.AsObject
 
-case class PrimitiveArrayGist(typ: BasicType, size: Int, id: ArrayId) derives Codec.AsObject
+case class PrimitiveArrayGist(typ: BasicType, size: Int, id: ArrayId)
+    derives Codec.AsObject

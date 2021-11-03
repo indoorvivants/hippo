@@ -43,7 +43,9 @@ object Api:
       .get(uri"$ApiHost/api/primitiveArray/${aid}")
       .response(asJson[HeapData])
 
-    Signal.fromFuture(req.send(backend).map(_.body.map(_.asInstanceOf[hd.PrimitiveArrayDump])))
+    Signal.fromFuture(
+      req.send(backend).map(_.body.map(_.asInstanceOf[hd.PrimitiveArrayDump]))
+    )
 
   def getString(
       search: StringId

@@ -1,6 +1,8 @@
-package hippo.backend
+package hippo
+package cli
 
 import cats.effect.*
+import hippo.backend.*
 
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
@@ -9,9 +11,9 @@ import fs2.io.file.Path
 import org.http4s.blaze.server.BlazeServerBuilder
 import hippo.backend.Views
 
-object HipsterServer extends IOApp:
+object Hippo extends IOApp:
   def resource(service: HeapExplorerService, config: ServerConfig) =
-    val frontendJS = config.mode + ".js"
+    val frontendJS = "frontend.js"
     val routes     = new Routes(service, frontendJS).routes
 
     val app = GZip(routes)
@@ -25,14 +27,12 @@ object HipsterServer extends IOApp:
       .resource
 
   def run(args: List[String]): IO[ExitCode] =
-    ServerConfig.apply.parse(args) match
+    ConfigReader.apply.parse(args) match
       case Left(help) =>
-        IO.delay(println(help)).as(ExitCode.Error)
+        IO.println(help).as(ExitCode.Error)
       case Right(config) =>
-        val status = IO.delay(
-          println(
-            s"Running server on http://${config.host}:${config.port} (mode: ${config.mode})"
-          )
+        val status = IO.println(
+          s"Running server on http://${config.host}:${config.port} (mode: ${config.mode})"
         )
 
         val fileRead =
@@ -56,4 +56,4 @@ object HipsterServer extends IOApp:
           .flatMap(service => resource(service, config))
           .use(_ => status *> IO.never)
           .as(ExitCode.Success)
-end HipsterServer
+end Hippo

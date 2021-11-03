@@ -45,9 +45,9 @@ val Dependencies = new {
   )
 
   lazy val shared = Def.settings(
-    libraryDependencies += "io.circe"   %%% "circe-core"  % V.circe,
-    libraryDependencies += "io.circe"   %%% "circe-parser"  % V.circe % Test,
-    libraryDependencies += "org.scodec" %%% "scodec-bits" % V.scodecBits
+    libraryDependencies += "io.circe"   %%% "circe-core"   % V.circe,
+    libraryDependencies += "io.circe"   %%% "circe-parser" % V.circe % Test,
+    libraryDependencies += "org.scodec" %%% "scodec-bits"  % V.scodecBits
   )
 
   lazy val tests = Def.settings(
@@ -63,10 +63,12 @@ lazy val root =
     backend,
     shared.js,
     shared.jvm,
-    analyser.jvm
+    analyser.jvm,
+    cli
   )
 
-lazy val frontend = (project in file("modules/frontend"))
+lazy val frontend = project
+  .in(file("modules/frontend"))
   .dependsOn(shared.js)
   .enablePlugins(ScalaJSPlugin)
   .settings(scalaJSUseMainModuleInitializer := true)
@@ -82,19 +84,33 @@ lazy val backend = (project in file("modules/backend"))
   .settings(Dependencies.backend)
   .settings(Dependencies.tests)
   .settings(commonBuildSettings)
-  .enablePlugins(JavaAppPackaging)
-  .enablePlugins(DockerPlugin)
+
+lazy val cli = project
+  .in(file("modules/cli"))
+  .dependsOn(backend)
+  .settings(commonBuildSettings)
   .settings(
-    Test / fork := true,
-    Universal / mappings += {
-      val appJs = (frontend / Compile / fullOptJS).value.data
-      appJs -> ("lib/prod.js")
-    },
-    Universal / javaOptions ++= Seq(
-      "--port 8080",
-      "--mode prod"
-    ),
-    Docker / packageName := "laminar-http4s-example"
+    Compile / resourceGenerators +=
+      Def.taskIf {
+        if (sys.env.contains("CI")) {
+          val out = (Compile / resourceManaged).value / "frontend.js"
+
+          val fullOpt = (frontend / Compile / fullOptJS).value.data
+
+          IO.copyFile(fullOpt, out)
+
+          List(out)
+        } else {
+          val out = (Compile / resourceManaged).value / "frontend.js"
+
+          val fastOpt = (frontend / Compile / fastOptJS).value.data
+
+          IO.copyFile(fastOpt, out)
+
+          List(out)
+
+        }
+      }.taskValue
   )
 
 lazy val shared = crossProject(JSPlatform, JVMPlatform)
@@ -106,7 +122,8 @@ lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .jvmSettings(commonBuildSettings)
   .settings(
     scalacOptions ++= Seq("-Xmax-inlines", "100")
-  ).settings(Dependencies.tests)
+  )
+  .settings(Dependencies.tests)
 
 lazy val analyser = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
@@ -117,35 +134,12 @@ lazy val analyser = crossProject(JSPlatform, JVMPlatform)
   .jsSettings(commonBuildSettings)
   .jvmSettings(commonBuildSettings)
 
-lazy val fastOptCompileCopy = taskKey[Unit]("")
-
-val jsPath = "modules/backend/src/main/resources"
-
-fastOptCompileCopy := {
-  val source = (frontend / Compile / fastOptJS).value.data
-  IO.copyFile(
-    source,
-    baseDirectory.value / jsPath / "dev.js"
-  )
-}
-
-lazy val fullOptCompileCopy = taskKey[Unit]("")
-
-fullOptCompileCopy := {
-  val source = (frontend / Compile / fullOptJS).value.data
-  IO.copyFile(
-    source,
-    baseDirectory.value / jsPath / "prod.js"
-  )
-
-}
-
 lazy val commonBuildSettings: Seq[Def.Setting[_]] = Seq(
   scalaVersion := V.Scala
 )
 
-addCommandAlias("runDev", ";fastOptCompileCopy; backend/reStart --mode dev")
-addCommandAlias("runProd", ";fullOptCompileCopy; backend/reStart --mode prod")
+/* addCommandAlias("runDev", ";fastOptCompileCopy; backend/reStart --mode dev") */
+/* addCommandAlias("runProd", ";fullOptCompileCopy; backend/reStart --mode prod") */
 
 val scalafixRules = Seq(
   "OrganizeImports",

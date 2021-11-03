@@ -1,7 +1,7 @@
 package hippo.frontend
 import com.raquo.laminar.api.L.*
 import com.raquo.waypoint.Router
-import example.frontend.components.SearchBox
+import hippo.frontend.components.SearchBox
 import hippo.shared.profile.*
 import scodec.bits.ByteVector
 
@@ -86,7 +86,7 @@ end renderMainPage
 def renderPage(page: Page)(using Router[Page]) =
   div(
     className := styles.cls.container,
-    h1(cls := styles.cls.heading, "Hippo"),
+    h1(cls := styles.cls.heading, "Hippos"),
     p(
       cls := styles.cls.description,
       "Unfinished, untidy heap dump browser (it will never be finished)"

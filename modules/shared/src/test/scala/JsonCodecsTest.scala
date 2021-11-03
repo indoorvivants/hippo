@@ -29,7 +29,7 @@ object JsonCodecsTest
 
   opaque type MyId = Identifier
   object MyId extends OpaqueId[MyId]
-  
+
   test("OpaqueId serialisation roundtrip") {
     forall { (l: Long) =>
       val id = MyId.fromLong(l)

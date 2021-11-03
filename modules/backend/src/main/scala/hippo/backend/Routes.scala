@@ -29,11 +29,13 @@ class Routes(
     Kleisli.liftF {
       IO(println(ex)) *> IO.raiseError(ex)
     }
-  
+
   // not sure why I have to do this here..
   import HeapData as hd
-  given Encoder[hd.PrimitiveArrayDump] = Encoder[HeapData].contramap[hd.PrimitiveArrayDump](identity)
-  given Encoder[hd.ObjectArrayDump] = Encoder[HeapData].contramap[hd.ObjectArrayDump](identity)
+  given Encoder[hd.PrimitiveArrayDump] =
+    Encoder[HeapData].contramap[hd.PrimitiveArrayDump](identity)
+  given Encoder[hd.ObjectArrayDump] =
+    Encoder[HeapData].contramap[hd.ObjectArrayDump](identity)
 
   def routes = HttpRoutes
     .of[IO] {
@@ -46,7 +48,7 @@ class Routes(
         service
           .getPrimitiveArray(ArrayId.fromLong(aid.toLong))
           .flatMap(res => Ok.apply(res.asJson))
-      
+
       case request @ GET -> Root / "api" / "objectArray" / aid =>
         service
           .getObjectArray(ArrayId.fromLong(aid.toLong))
@@ -57,6 +59,7 @@ class Routes(
           .flatMap(res => Ok(res.asJson))
 
       case request @ GET -> Root / "frontend" / "app.js" =>
+        println(s"YO: $frontendJS")
         StaticFile
           .fromResource[IO](frontendJS, Some(request))
           .getOrElseF(NotFound())

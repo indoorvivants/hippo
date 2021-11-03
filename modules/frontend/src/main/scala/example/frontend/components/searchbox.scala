@@ -1,4 +1,5 @@
-package example.frontend.components
+package hippo.frontend
+package components
 
 import com.raquo.laminar.api.L.*
 
