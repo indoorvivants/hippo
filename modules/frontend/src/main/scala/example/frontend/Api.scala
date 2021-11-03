@@ -8,6 +8,8 @@ import sttp.client3.circe.*
 import sttp.capabilities.WebSockets
 import hippo.shared.profile.*
 import com.raquo.laminar.api.L.*
+import HeapData as hd
+import io.circe.Decoder
 
 object Api:
   given backend: SttpBackend[Future, WebSockets] = FetchBackend()
@@ -35,6 +37,13 @@ object Api:
       .response(asJson[Summary])
 
     Signal.fromFuture(req.send(backend).map(_.body))
+
+  def getPrimitiveArray(aid: ArrayId): Result[hd.PrimitiveArrayDump] =
+    val req = basicRequest
+      .get(uri"$ApiHost/api/primitiveArray/${aid}")
+      .response(asJson[HeapData])
+
+    Signal.fromFuture(req.send(backend).map(_.body.map(_.asInstanceOf[hd.PrimitiveArrayDump])))
 
   def getString(
       search: StringId

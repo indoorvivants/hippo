@@ -17,22 +17,27 @@ def renderByteVector(bv: ByteVector) =
 
   pre(code(sb.result))
 
+extension [T](st: Signal[Option[Either[Throwable, T]]])
+  def handled(f: T => Element) = st.map {
+    case None            => i("loading")
+    case Some(Left(err)) => b(err.toString)
+    case Some(Right(t))  => f(t)
+  }
+
 def renderStringPage(strId: StringId) =
   div(
     h2("String"),
     strong("ID: "),
     span(strId.id.value.toString),
     div(
-      child <-- Api.getString(strId).map {
-        case None            => i("loading")
-        case Some(Left(err)) => b(err.toString)
-        case Some(Right(StringData.Valid(s))) =>
+      child <-- Api.getString(strId).handled {
+        case StringData.Valid(s) =>
           div(
             "✅ Valid UTF-8 String",
             pre(code(s))
           )
 
-        case Some(Right(StringData.Invalid(bytes))) =>
+        case StringData.Invalid(bytes) =>
           div(
             "❌ Invalid UTF-8 data stored in String space",
             renderByteVector(bytes.toByteVector)
@@ -48,59 +53,111 @@ def renderMainPage(using Router[Page]) =
   val sb = SearchBox.create
 
   div(
+    cls := "row",
     div(
-      child <-- Api.getSummary.map(_.get.right.get).map(renderSummary)
+      cls := styles.cls.records_summary,
+      h2("Summary of records"),
+      child <-- Api.getSummary.handled(renderSummary)
     ),
-    h2("Search strings (by prefix only for now)"),
-    sb.node,
-    child <-- sb.signal.flatMap { search =>
-      if search.isEmpty then Signal.fromValue(b("..."))
-      else
-        Api.searchStrings(search).map { res =>
-          res match
-            case Some(Right(lst)) =>
-              ul(
-                lst.take(100).collect {
-                  case RecordData.Strings(sid, StringData.Valid(s)) =>
-                    li(magicLink(Page.StringPage(sid), s))
-                }
-              )
-            case other => div(other.toString)
-        }
-    }
+    div(
+      cls := styles.cls.string_search,
+      h3(cls := styles.cls.string_search_header, "Search strings"),
+      p(
+        cls := styles.cls.string_search_description,
+        small("by prefix only (for now)")
+      ),
+      sb.node,
+      child <-- sb.signal.flatMap { search =>
+        if search.isEmpty then Signal.fromValue(b("..."))
+        else
+          Api.searchStrings(search).handled { lst =>
+            ul(
+              lst.take(100).collect {
+                case RecordData.Strings(sid, StringData.Valid(s)) =>
+                  li(magicLink(Page.StringPage(sid), s))
+              }
+            )
+          }
+      }
+    )
   )
 end renderMainPage
 
 def renderPage(page: Page)(using Router[Page]) =
-  page match
-    case Page.ClassPage(classId)   => renderClassPage(classId)
-    case Page.StringPage(strId)    => renderStringPage(strId)
-    case Page.MainPage             => renderMainPage
-    case Page.ArrayDumpPage(arrId) => renderArrayPage(arrId)
+  div(
+    className := styles.cls.container,
+    h1(cls := styles.cls.heading, "Hippo"),
+    p(
+      cls := styles.cls.description,
+      "Unfinished, untidy heap dump browser (it will never be finished)"
+    ),
+    page match
+      case Page.ClassPage(classId)   => renderClassPage(classId)
+      case Page.StringPage(strId)    => renderStringPage(strId)
+      case Page.MainPage             => renderMainPage
+      case Page.ArrayDumpPage(arrId) => renderArrayPage(arrId)
+  )
 
-def renderArrayPage(id: ArrayId) = 
-  div(s"rendering $id")
+def renderArrayPage(id: ArrayId) =
+  div(
+    child <-- Api.getPrimitiveArray(id).handled { pma =>
+      div(
+        pma.toString
+      )
+    }
+  )
 
-def renderSummary(sums: Summary) =
+def renderSummary(sums: Summary)(using Router[Page]) =
   val rendered  = sums.recordTypes.map(_._2).map(i => s"$i records")
   val maxLength = rendered.map(_.length).max
   val padded    = rendered.map(_.padTo(maxLength, ' '))
-  ul(
-    sums.recordTypes.zip(rendered).map { case ((tag, _), rnd) =>
-      val segmentRender = pre(b(rnd), nbsp, span(tag.toString))
-      if tag == Tag.HeapDumpSegment then
-        li(
-          segmentRender,
-          ul(sums.heapDataTypes.map { case (name, cnt) =>
-            li(b(cnt), " ", name)
-          })
-        )
-      else li(segmentRender)
-    }
+
+  div(
+    cls := "row",
+    div(
+      cls := styles.cls.record_types_summary,
+      h4("Record types"),
+      ul(
+        sums.recordTypes.zip(rendered).map { case ((tag, _), rnd) =>
+          val segmentRender = pre(b(rnd), nbsp, span(tag.toString))
+          if tag == Tag.HeapDumpSegment then
+            li(
+              segmentRender,
+              ul(sums.heapDataTypes.map { case (name, cnt) =>
+                li(b(cnt), " ", name)
+              })
+            )
+          else li(segmentRender)
+        }
+      )
+    ),
+    renderTopPrimitiveArrays(sums.biggestArrays)
   )
 end renderSummary
 
+def renderTopPrimitiveArrays(top: Seq[PrimitiveArrayGist])(using Router[Page]) =
+  div(
+    cls := styles.cls.primitive_array_summary,
+    h4("Longest primitive arrays"),
+    ol(
+      top.map { case PrimitiveArrayGist(typ, els, id) =>
+        li(
+          magicLink(
+            Page.ArrayDumpPage(id),
+            span(b(typ.toString), s" ($els elements)")
+          )
+        )
+      }
+    )
+  )
+
 def magicLink(page: Page, text: String)(using router: Router[Page]) = a(
+  href := router.absoluteUrlForPage(page),
+  onClick.preventDefault --> (_ => router.pushState(page)),
+  text
+)
+
+def magicLink(page: Page, text: Element)(using router: Router[Page]) = a(
   href := router.absoluteUrlForPage(page),
   onClick.preventDefault --> (_ => router.pushState(page)),
   text
@@ -110,7 +167,5 @@ object Render:
   val app: Div =
     given router: Router[Page] = Page.router
     div(
-      h1("Hippo"),
-      small("Unfinished, untidy heap dump browser"),
       child <-- router.$currentPage.map(renderPage)
     )

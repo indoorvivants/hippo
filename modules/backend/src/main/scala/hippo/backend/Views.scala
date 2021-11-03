@@ -2,6 +2,7 @@ package hippo.backend
 
 import io.circe.Codec
 import hippo.shared.profile.*
+import hippo.shared.profile.HeapData.PrimitiveArrayDump
 
 case class LoadedClass(
     name: String,
@@ -83,6 +84,14 @@ class Views private (profile: HeapProfile):
   }
 
   import HeapData.*
+  import scala.util.chaining.*
+
+  lazy val biggestPrimitiveArrays = heapData
+    .collect { case pd: PrimitiveArrayDump =>
+      pd
+    }
+    .top(20, -1 * _.numElements)
+    .map(ar => PrimitiveArrayGist(ar.elementType, ar.numElements, ar.id))
 
   lazy val arrayMap: Map[ArrayId, PrimitiveArrayDump | ObjectArrayDump] =
     heapData.collect {
@@ -92,6 +101,9 @@ class Views private (profile: HeapProfile):
         hd.id -> hd
     }.toMap
 end Views
+
+extension [T](arr: Seq[T])
+  def top[A: Ordering](n: Int, by: T => A): Seq[T] = arr.sortBy(by).take(n)
 
 object Views:
   def apply(prof: HeapProfile) = new Views(prof)

@@ -7,6 +7,7 @@ import HeapData as hd
 import RecordData as rd
 import StringData as sd
 import io.circe.Codec
+import cats.syntax.all.*
 
 trait HeapExplorerService:
   def getString(sid: StringId): IO[StringData]
@@ -21,13 +22,19 @@ object HeapExplorerService:
     val views = Views(profile)
     import views.*
 
-    arrayMap.toIterator.collect {
-      case (id, _: hd.PrimitiveArrayDump) => println(s"Primitive array: $id")
-    }.take(5).toList
-    
-    arrayMap.toIterator.collect {
-      case (id, _: hd.ObjectArrayDump) => println(s"Object array: $id")
-    }.take(5).toList
+    arrayMap.toIterator
+      .collect { case (id, _: hd.PrimitiveArrayDump) =>
+        println(s"Primitive array: $id")
+      }
+      .take(5)
+      .toList
+
+    arrayMap.toIterator
+      .collect { case (id, _: hd.ObjectArrayDump) =>
+        println(s"Object array: $id")
+      }
+      .take(5)
+      .toList
 
     override def getString(sid: StringId) =
       IO.fromOption(stringMap.get(sid).map(_.content))(Err.StringNotFound(sid))
@@ -48,9 +55,12 @@ object HeapExplorerService:
       })(Err.ArrayNotFound(aid))
 
     override def getSummary =
-      IO(views.heapDataByType)
-        .product(IO(views.segmentTypes.toList.flatMap(_.toList)))
-        .map(Summary.apply)
+      (
+        IO(views.heapDataByType),
+        IO(views.segmentTypes.toList.flatMap(_.toList)),
+        IO(views.biggestPrimitiveArrays.toList)
+      ).parTupled.map(Summary.apply)
+
   end Impl
 end HeapExplorerService
 
