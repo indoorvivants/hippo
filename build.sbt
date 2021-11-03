@@ -13,8 +13,6 @@ val V = new {
   val waypoint        = "0.4.2"
 }
 
-scalaVersion := V.Scala
-
 val Dependencies = new {
   private val http4sModules =
     Seq("dsl", "blaze-server", "ember-client", "ember-server", "circe").map(
@@ -138,34 +136,19 @@ lazy val commonBuildSettings: Seq[Def.Setting[_]] = Seq(
   scalaVersion := V.Scala
 )
 
-/* addCommandAlias("runDev", ";fastOptCompileCopy; backend/reStart --mode dev") */
-/* addCommandAlias("runProd", ";fullOptCompileCopy; backend/reStart --mode prod") */
-
-val scalafixRules = Seq(
-  "OrganizeImports",
-  "DisableSyntax",
-  "LeakingImplicitClassVal",
-  "ProcedureSyntax",
-  "NoValInForComprehension"
-).mkString(" ")
-
 val CICommands = Seq(
-  "clean",
-  "backend/compile",
-  "backend/test",
-  "frontend/compile",
-  "frontend/fastOptJS",
-  "frontend/test",
   "scalafmtCheckAll",
-  s"scalafix --check $scalafixRules"
+  "clean",
+  "compile",
+  "test"
 ).mkString(";")
 
 val PrepareCICommands = Seq(
-  "test:scalafmtAll",
-  "compile:scalafmtAll",
+  "Test/scalafmtAll",
+  "scalafmtAll",
   "scalafmtSbt"
 ).mkString(";")
 
 addCommandAlias("ci", CICommands)
 
-addCommandAlias("preCI", PrepareCICommands)
+addCommandAlias("fix", PrepareCICommands)
