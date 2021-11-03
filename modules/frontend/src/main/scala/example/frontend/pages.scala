@@ -6,6 +6,11 @@ import hippo.shared.profile.*
 import com.raquo.waypoint.*
 import io.circe.syntax.*
 
+/** This file defines various pages which the user can navigate between the
+  * serialisation/deserialisation is handled by Circe automatically, only manual
+  * bit is to add the routing path
+  */
+
 enum Page derives Codec.AsObject:
   case ClassPage(classId: ClassId)
   case StringPage(stringId: StringId)
@@ -18,6 +23,7 @@ enum Page derives Codec.AsObject:
       case _: StringPage    => "Hippo: string pages"
       case _: ArrayDumpPage => "Hippo: array dump"
       case _                => "Hippo"
+end Page
 
 object Page:
   def toStr(p: Page) = p.asJson.noSpacesSortKeys

@@ -5,6 +5,12 @@ import hippo.frontend.components.SearchBox
 import hippo.shared.profile.*
 import scodec.bits.ByteVector
 
+/**
+ * This file contains various functions
+ * that render the data and pages as Laminar's reactive
+ * elements
+ */
+
 def renderByteVector(bv: ByteVector) =
   val sb   = StringBuilder()
   val repr = bv.toHex

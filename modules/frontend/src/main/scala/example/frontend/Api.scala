@@ -11,6 +11,10 @@ import com.raquo.laminar.api.L.*
 import HeapData as hd
 import io.circe.Decoder
 
+/** This file defines very crude interaction with the backend service rendering
+  * the responses using the same data types on both backend and frontend
+  */
+
 object Api:
   given backend: SttpBackend[Future, WebSockets] = FetchBackend()
 
