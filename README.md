@@ -14,11 +14,12 @@ This project serves purely as an exercise for learning [scodec](https://github.c
 The main purpose of it is to provide a self-contained app that you can launch by
 pointing at a heap dump, and have it analysed in a nice web-based interface.
 
-It should be as simple as running this:
+It should be as simple as running this (in SBT shell):
 
-> backend/run --hprof heapdump-1631032668990.hprof --port 1111
+> cli/run --hprof heapdump-1631032668990.hprof
 
-And then opening http://localhost:1111 to see this interface:
+And it will launch the server with frontend at http://localhost:9999
 
-// TODO: add interface GIF
+https://user-images.githubusercontent.com/1052965/140199076-a9268b4b-864e-4a17-b9ad-a7937024dd61.mp4
+
 
