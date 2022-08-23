@@ -2,7 +2,7 @@ val V = new {
   val Scala = "3.1.0"
 
   val laminar         = "0.13.1"
-  val http4s          = "0.23.6"
+  val http4s          = "0.23.15"
   val sttp            = "3.3.15"
   val circe           = "0.14.1"
   val decline         = "2.2.0"
