@@ -42,8 +42,8 @@ object Identifier:
   extension (d: Identifier) def value: Long = d
   inline def from(id: Long): Identifier     = id
 
-  private val enc: Encoder[Identifier] = Encoder.encodeLong
-  private val dec: Decoder[Identifier] = Decoder.decodeLong
+  private val enc: Encoder[Identifier] = Encoder.encodeString.contramap(_.toString)
+  private val dec: Decoder[Identifier] = Decoder.decodeString.map(_.toLong)
   given Codec[Identifier]              = Codec.from(dec, enc)
 
 opaque type ClassSerialNumber = Int
