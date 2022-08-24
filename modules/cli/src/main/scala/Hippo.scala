@@ -8,8 +8,9 @@ import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
 import org.http4s.server.middleware.GZip
 import fs2.io.file.Path
-import org.http4s.blaze.server.BlazeServerBuilder
 import hippo.backend.Views
+import com.comcast.ip4s.*
+import scala.concurrent.duration.*
 
 object Hippo extends IOApp:
   def resource(service: HeapExplorerService, config: ServerConfig) =
@@ -20,11 +21,14 @@ object Hippo extends IOApp:
 
     import cats.syntax.all.*
 
-    BlazeServerBuilder
-      .apply[IO]
-      .bindHttp(config.port.value, config.host.show)
+    EmberServerBuilder
+      .default[IO]
+      .withPort(config.port)
+      .withHost(config.host)
+      .withShutdownTimeout(1.second)
       .withHttpApp(app)
-      .resource
+      .build
+  end resource
 
   def run(args: List[String]): IO[ExitCode] =
     ConfigReader.apply.parse(args) match

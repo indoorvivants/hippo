@@ -1,21 +1,21 @@
 val V = new {
-  val Scala = "3.1.0"
+  val Scala = "3.1.3"
 
-  val laminar         = "0.13.1"
-  val http4s          = "0.23.6"
-  val sttp            = "3.3.15"
-  val circe           = "0.14.1"
-  val decline         = "2.2.0"
+  val laminar         = "0.14.2"
+  val http4s          = "0.23.15"
+  val sttp            = "3.3.18"
+  val circe           = "0.14.2"
+  val decline         = "2.3.0"
   val organiseImports = "0.5.0"
-  val weaver          = "0.7.7"
-  val scodec          = "2.0.0"
-  val scodecBits      = "1.1.29"
-  val waypoint        = "0.4.2"
+  val weaver          = "0.7.15"
+  val scodec          = "2.2.0"
+  val scodecBits      = "1.1.34"
+  val waypoint        = "0.5.0"
 }
 
 val Dependencies = new {
   private val http4sModules =
-    Seq("dsl", "blaze-server", "ember-client", "ember-server", "circe").map(
+    Seq("dsl", "ember-client", "ember-server", "circe").map(
       "http4s-" + _
     )
 
