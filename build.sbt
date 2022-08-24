@@ -151,4 +151,4 @@ val PrepareCICommands = Seq(
 
 addCommandAlias("ci", CICommands)
 
-addCommandAlias("fix", PrepareCICommands)
+addCommandAlias("preCI", PrepareCICommands)
