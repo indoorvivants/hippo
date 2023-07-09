@@ -10,7 +10,7 @@ val V = new {
   val weaver          = "0.8.0"
   val scodec          = "2.2.0"
   val scodecBits      = "1.1.34"
-  val waypoint        = "0.5.0"
+  val waypoint        = "7.0.0"
 }
 
 val Dependencies = new {
