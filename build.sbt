@@ -8,7 +8,7 @@ val V = new {
   val decline         = "2.3.1"
   val organiseImports = "0.5.0"
   val weaver          = "0.8.0"
-  val scodec          = "2.2.0"
+  val scodec          = "2.2.1"
   val scodecBits      = "1.1.34"
   val waypoint        = "0.5.0"
 }
